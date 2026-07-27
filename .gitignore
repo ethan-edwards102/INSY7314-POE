@@ -45,6 +45,9 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .DS_Store
 Thumbs.db
 
+# IDE files
+.idea/
+
 # Production / Build output (uncomment if using TypeScript/build tools)
 # dist/
 # build/
