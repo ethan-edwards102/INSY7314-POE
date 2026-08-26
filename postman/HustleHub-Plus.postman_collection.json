@@ -2,7 +2,7 @@
   "info": {
     "name": "HustleHub+ API",
     "_postman_id": "7f3c1e20-4b9a-4d61-9f2e-8c5a1d0b3e77",
-    "description": "# HustleHub+ API - Part 1\n\nCovers user registration, login and the existing marketplace endpoints.\n\n## Running the collection\n\n1. Start MongoDB, then run `node server.js`.\n2. Check the `baseUrl` collection variable matches the port in your `.env` (default `http://localhost:5000`).\n3. Run the whole collection with the Postman runner, or send the requests individually from the top down.\n\nEvery run generates fresh email addresses, so the collection can be run repeatedly without clearing the database.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to confirm it is JSON and that it never contains a password hash, a file path or a stack trace.",
+    "description": "# HustleHub+ API - Part 1\n\nCovers user registration, login and the existing marketplace endpoints.\n\n## Running the collection\n\n1. Start MongoDB, then run `npm run certs` once, then `npm start`.\n2. Check the `baseUrl` collection variable matches the port in your `.env` (default `https://localhost:5000`).\n3. The API uses a self-signed certificate, so turn off Settings > General > SSL certificate verification in Postman.\n4. Run the whole collection with the Postman runner, or send the requests individually from the top down.\n\nEvery run generates fresh email addresses, so the collection can be run repeatedly without clearing the database.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to confirm it is JSON and that it never contains a password hash, a file path or a stack trace.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -31,7 +31,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5000",
+      "value": "https://localhost:5000",
       "type": "string"
     }
   ],

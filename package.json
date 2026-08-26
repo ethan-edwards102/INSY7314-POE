@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "certs": "node scripts/generate-cert.mjs",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test:api": "newman run postman/HustleHub-Plus.postman_collection.json"
+    "test:api": "newman run postman/HustleHub-Plus.postman_collection.json --insecure"
   },
   "repository": {
     "type": "git",
@@ -27,6 +28,7 @@
     "mongoose": "^9.8.0"
   },
   "devDependencies": {
-    "newman": "^6.2.2"
+    "newman": "^6.2.2",
+    "selfsigned": "^5.5.0"
   }
 }
