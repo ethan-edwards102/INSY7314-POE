@@ -1,19 +1,59 @@
-// Mongoose reports bad input as ValidationError (schema rules) or CastError
-// (malformed ObjectId / wrong type), both of which are client mistakes.
+// Errors are logged in full on the server, where the detail is useful, and
+// never returned to the client, where a stack trace or file path would tell an
+// attacker how the system is built.
+export const logServerError = (error) => {
+    console.error(`[${new Date().toISOString()}]`, error);
+};
+
+// Translates an error raised while talking to the database into a response.
+// Anything not recognised here is treated as a fault on our side and answered
+// with a generic 500, because an unrecognised error is exactly the kind whose
+// message is most likely to contain internal detail.
 export const handleError = (res, error) => {
-    if (error.name === 'ValidationError' || error.name === 'CastError') {
+    // Schema rules rejected the document. Report which fields failed, in the
+    // same shape the request validation middleware uses.
+    if (error.name === 'ValidationError') {
         return res.status(400).json({
-            message: error.message,
+            success: false,
+            message: 'Validation failed',
+            errors: Object.values(error.errors).map((fieldError) => ({
+                field: fieldError.path,
+                message: fieldError.message,
+            })),
         });
     }
 
+    // A value could not be coerced to the type the schema expects, typically a
+    // malformed ObjectId in the URL.
+    if (error.name === 'CastError') {
+        return res.status(400).json({
+            success: false,
+            message: `Invalid value supplied for '${error.path}'`,
+        });
+    }
+
+    // A unique index was violated. Mongo raises this at write time, so it
+    // arrives as a driver error rather than a Mongoose ValidationError.
+    if (error.code === 11000) {
+        const [field = 'value'] = Object.keys(error.keyPattern ?? {});
+
+        return res.status(409).json({
+            success: false,
+            message: `An account with that ${field} already exists`,
+        });
+    }
+
+    logServerError(error);
+
     return res.status(500).json({
-        message: error.message,
+        success: false,
+        message: 'An unexpected error occurred',
     });
-}
+};
 
 export const notFound = (res, resource) => {
     return res.status(404).json({
+        success: false,
         message: `${resource} not found`,
     });
-}
+};
