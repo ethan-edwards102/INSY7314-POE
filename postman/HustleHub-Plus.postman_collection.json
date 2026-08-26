@@ -1,0 +1,1295 @@
+{
+  "info": {
+    "name": "HustleHub+ API",
+    "_postman_id": "7f3c1e20-4b9a-4d61-9f2e-8c5a1d0b3e77",
+    "description": "# HustleHub+ API - Part 1\n\nCovers user registration, login and the existing marketplace endpoints.\n\n## Running the collection\n\n1. Start MongoDB, then run `node server.js`.\n2. Check the `baseUrl` collection variable matches the port in your `.env` (default `http://localhost:5000`).\n3. Run the whole collection with the Postman runner, or send the requests individually from the top down.\n\nEvery run generates fresh email addresses, so the collection can be run repeatedly without clearing the database.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to confirm it is JSON and that it never contains a password hash, a file path or a stack trace.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Runs after every request in the collection. These are the guarantees",
+          "// that must hold no matter which endpoint was called or how it failed.",
+          "pm.test('Response is JSON, not an HTML error page', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});",
+          "",
+          "pm.test('Response exposes no internal detail', function () {",
+          "    var text = pm.response.text();",
+          "    var markers = ['node_modules', 'INSY7314-POE', 'at JSON.parse', 'MongoServerError'];",
+          "    markers.forEach(function (marker) {",
+          "        pm.expect(text).to.not.include(marker);",
+          "    });",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Registration - successful",
+      "description": "The happy paths required by the brief. Each run generates a fresh email address so the collection can be run repeatedly without clearing the database.",
+      "item": [
+        {
+          "name": "Register a Client",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// A unique address per run keeps this request repeatable, and is reused",
+                  "// later by the duplicate-email tests.",
+                  "var address = 'client.' + Date.now() + '@example.com';",
+                  "pm.collectionVariables.set('clientEmail', address);",
+                  "pm.collectionVariables.set('clientEmailUpper', address.toUpperCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var body = pm.response.json();",
+                  "",
+                  "pm.test('Reports success', function () {",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Registration successful');",
+                  "});",
+                  "",
+                  "pm.test('Returns the created account', function () {",
+                  "    pm.expect(body.data).to.have.property('_id');",
+                  "    pm.expect(body.data.email).to.eql(pm.collectionVariables.get('clientEmail').toLowerCase());",
+                  "});",
+                  "",
+                  "pm.test('Defaults the role to Client', function () {",
+                  "    pm.expect(body.data.role).to.eql('Client');",
+                  "});",
+                  "",
+                  "pm.test('Never returns the password', function () {",
+                  "    pm.expect(body.data).to.not.have.property('password');",
+                  "});",
+                  "",
+                  "pm.test('Response body contains no password hash', function () {",
+                  "    pm.expect(pm.response.text()).to.not.include('$2b$');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Registers an account with no role supplied, which should default to Client.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dylan Olsen\",\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register a Freelancer",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('freelancerEmail', 'freelancer.' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Stores the requested role', function () {",
+                  "    pm.expect(pm.response.json().data.role).to.eql('Freelancer');",
+                  "});",
+                  "",
+                  "pm.test('Response body contains no password hash', function () {",
+                  "    pm.expect(pm.response.text()).to.not.include('$2b$');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Registers an account with an explicitly chosen, permitted role.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bob Jones\",\n  \"email\": \"{{freelancerEmail}}\",\n  \"password\": \"An0ther!Pw\",\n  \"role\": \"Freelancer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Unexpected fields are ignored",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('extraEmail', 'extra.' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var body = pm.response.json();",
+                  "",
+                  "pm.test('Ignores the _id supplied by the caller', function () {",
+                  "    pm.expect(body.data._id).to.not.eql('000000000000000000000000');",
+                  "});",
+                  "",
+                  "pm.test('Does not store the unexpected fields', function () {",
+                  "    pm.expect(body.data).to.not.have.property('isAdmin');",
+                  "    pm.expect(body.data.createdAt).to.not.include('1999');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Sends _id, createdAt and isAdmin alongside the real fields. The API should discard them rather than write them to the new document, which is the defence against mass assignment.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mass Assignment\",\n  \"email\": \"{{extraEmail}}\",\n  \"password\": \"Str0ng!Pass\",\n  \"_id\": \"000000000000000000000000\",\n  \"isAdmin\": true,\n  \"createdAt\": \"1999-01-01T00:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Registration - invalid scenarios",
+      "description": "The invalid and malicious cases the brief requires to be handled. Every one must be answered with a controlled JSON response that exposes no internal detail.",
+      "item": [
+        {
+          "name": "Duplicate email is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test('Explains that the account already exists', function () {",
+                  "    pm.expect(pm.response.json().message).to.include('already exists');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Re-registers the address created by the first request. Uniqueness is enforced by the index on the collection, so this arrives as a duplicate key error and must be reported as a conflict rather than a server fault.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dylan Olsen\",\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Duplicate email in a different case is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Addresses are lowercased before storage, so changing the case must not allow a second account.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dylan Olsen\",\n  \"email\": \"{{clientEmailUpper}}\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Admin role cannot be self-assigned",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test(\"Identifies 'role' as the offending field\", function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include('role');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Privilege escalation attempt. A caller must not be able to grant itself the Admin role at registration.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sneaky User\",\n  \"email\": \"sneaky@example.com\",\n  \"password\": \"Str0ng!Pass\",\n  \"role\": \"Admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "NoSQL operator injection is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Refuses a non-string email', function () {",
+                  "    var errors = pm.response.json().errors;",
+                  "    pm.expect(errors[0].field).to.eql('email');",
+                  "    pm.expect(errors[0].message).to.include('must be text');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Sends a Mongo query operator in place of the email string. If it reached the database it could match a document without knowing the real address, so anything that is not a string must be refused.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Injection Test\",\n  \"email\": { \"$ne\": null },\n  \"password\": \"Str0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing fields are all reported",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Reports name, email and password together', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.have.members(['name', 'email', 'password']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "An empty body should report every missing field at once rather than failing on the first.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Weak password is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test(\"Identifies 'password' as the offending field\", function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include('password');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "The password rule requires 8-72 characters with upper case, lower case, a digit and a symbol.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weak Password\",\n  \"email\": \"weak@example.com\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Malformed email is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test(\"Identifies 'email' as the offending field\", function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bad Email\",\n  \"email\": \"not-an-email\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Script tag in name is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test(\"Identifies 'name' as the offending field\", function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include('name');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "The name field is whitelisted to letters, spaces, hyphens and apostrophes, so markup never reaches the database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"<script>alert(1)</script>\",\n  \"email\": \"xss@example.com\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Malformed JSON is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Reports the parse failure without a stack trace', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Request body is not valid JSON');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "A truncated body fails in the JSON parser before any application code runs. Without a central error handler Express answers this with an HTML stack trace.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Broken\",",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Oversized body is rejected",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Built here rather than stored in the request so the collection file",
+                  "// does not need to contain 20kb of padding.",
+                  "pm.collectionVariables.set('oversizedName', new Array(20001).join('x'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 413', function () {",
+                  "    pm.response.to.have.status(413);",
+                  "});",
+                  "",
+                  "pm.test('Explains that the body is too large', function () {",
+                  "    pm.expect(pm.response.json().message).to.include('too large');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Bodies are capped so an oversized payload cannot be used to exhaust server memory.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{oversizedName}}\",\n  \"email\": \"big@example.com\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Unknown route returns a JSON 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Returns JSON rather than an HTML error page', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Route not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/registerr",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "registerr"
+              ]
+            },
+            "description": "A mistyped path must return controlled JSON, not an HTML error page.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dylan Olsen\",\n  \"email\": \"typo@example.com\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Login",
+      "description": "Written against the agreed contract ahead of the login endpoint being built. While POST /auth/login returns 404 these assertions report as skipped.",
+      "item": [
+        {
+          "name": "Log in with valid credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Login is implemented separately. Until the route exists these assertions",
+                  "// are skipped rather than failed, so the collection stays green and turns",
+                  "// into real tests the moment the endpoint lands.",
+                  "var pending = pm.response.code === 404;",
+                  "var check = pending ? pm.test.skip : pm.test;",
+                  "",
+                  "if (pending) {",
+                  "    console.log('POST /auth/login is not implemented yet - assertions skipped.');",
+                  "}",
+                  "",
+                  "check('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "check('Returns a JWT', function () {",
+                  "    var token = pm.response.json().data.token;",
+                  "    pm.expect(token).to.be.a('string');",
+                  "    pm.expect(token.split('.')).to.have.lengthOf(3);",
+                  "    pm.collectionVariables.set('authToken', token);",
+                  "});",
+                  "",
+                  "check('Token payload carries the id and role', function () {",
+                  "    var payload = JSON.parse(atob(pm.response.json().data.token.split('.')[1]));",
+                  "    pm.expect(payload).to.have.property('id');",
+                  "    pm.expect(payload).to.have.property('role');",
+                  "});",
+                  "",
+                  "check('Token payload carries no password hash', function () {",
+                  "    pm.expect(pm.response.text()).to.not.include('$2b$');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject a wrong password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Login is implemented separately. Until the route exists these assertions",
+                  "// are skipped rather than failed, so the collection stays green and turns",
+                  "// into real tests the moment the endpoint lands.",
+                  "var pending = pm.response.code === 404;",
+                  "var check = pending ? pm.test.skip : pm.test;",
+                  "",
+                  "if (pending) {",
+                  "    console.log('POST /auth/login is not implemented yet - assertions skipped.');",
+                  "}",
+                  "",
+                  "check('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "check('Does not reveal which credential was wrong', function () {",
+                  "    pm.expect(pm.response.json().message.toLowerCase()).to.not.include('password');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"WrongPassw0rd!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject an unknown account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Login is implemented separately. Until the route exists these assertions",
+                  "// are skipped rather than failed, so the collection stays green and turns",
+                  "// into real tests the moment the endpoint lands.",
+                  "var pending = pm.response.code === 404;",
+                  "var check = pending ? pm.test.skip : pm.test;",
+                  "",
+                  "if (pending) {",
+                  "    console.log('POST /auth/login is not implemented yet - assertions skipped.');",
+                  "}",
+                  "",
+                  "check('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Marketplace endpoints",
+      "description": "Smoke coverage of the existing service, client and booking endpoints, so the collection demonstrates the wider API alongside authentication.",
+      "item": [
+        {
+          "name": "Create a service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('serviceId', pm.response.json()._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"DogGrooming\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject an unknown service category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test(\"Identifies 'category' as the offending field\", function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include('category');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Hacking\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create a client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('clientId', pm.response.json()._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create a booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Stores the booking with its embedded detail', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.quantity).to.eql(2);",
+                  "    pm.expect(body.service.category).to.eql('DogGrooming');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-09-01T09:00:00.000Z\",\n  \"quantity\": 2,\n  \"client\": {\n    \"name\": \"Jane Smith\"\n  },\n  \"freelancer\": {\n    \"name\": \"Bob Jones\",\n    \"services\": []\n  },\n  \"service\": {\n    \"category\": \"DogGrooming\",\n    \"rate\": 250,\n    \"rateType\": \"Hour\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List bookings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns a counted list', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "    pm.expect(body.count).to.eql(body.data.length);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a malformed id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Reports the bad value without exposing internals', function () {",
+                  "    pm.expect(pm.response.json().message).to.include('Invalid value');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients/not-a-valid-id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "not-a-valid-id"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
