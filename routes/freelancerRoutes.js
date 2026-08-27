@@ -1,7 +1,10 @@
 import express from 'express';
 import * as freelancerController from '../controllers/freelancerController.js';
+import { authenticate } from '../middleware/authenticate.js';
 
 const router = express.Router();
+
+router.use(authenticate);
 
 router.post('/', freelancerController.createFreelancer);
 router.get('/', freelancerController.getFreelancers);

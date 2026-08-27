@@ -70,3 +70,13 @@ export const REGISTRATION_RULES = {
         required: false,
     },
 };
+
+export const LOGIN_RULES = {
+    email: REGISTRATION_RULES.email,
+    password: {
+        field: 'password',
+        label: 'Password',
+        required: true,
+        trim: false,
+    },
+};
