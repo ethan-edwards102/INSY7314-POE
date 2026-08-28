@@ -1,3 +1,5 @@
+import { fail } from './respond.js';
+
 // Errors are logged in full on the server, where the detail is useful, and
 // never returned to the client, where a stack trace or file path would tell an
 // attacker how the system is built.
@@ -13,23 +15,21 @@ export const handleError = (res, error) => {
     // Schema rules rejected the document. Report which fields failed, in the
     // same shape the request validation middleware uses.
     if (error.name === 'ValidationError') {
-        return res.status(400).json({
-            success: false,
-            message: 'Validation failed',
-            errors: Object.values(error.errors).map((fieldError) => ({
+        return fail(
+            res,
+            400,
+            'Validation failed',
+            Object.values(error.errors).map((fieldError) => ({
                 field: fieldError.path,
                 message: fieldError.message,
-            })),
-        });
+            }))
+        );
     }
 
     // A value could not be coerced to the type the schema expects, typically a
     // malformed ObjectId in the URL.
     if (error.name === 'CastError') {
-        return res.status(400).json({
-            success: false,
-            message: `Invalid value supplied for '${error.path}'`,
-        });
+        return fail(res, 400, `Invalid value supplied for '${error.path}'`);
     }
 
     // A unique index was violated. Mongo raises this at write time, so it
@@ -37,23 +37,14 @@ export const handleError = (res, error) => {
     if (error.code === 11000) {
         const [field = 'value'] = Object.keys(error.keyPattern ?? {});
 
-        return res.status(409).json({
-            success: false,
-            message: `An account with that ${field} already exists`,
-        });
+        return fail(res, 409, `An account with that ${field} already exists`);
     }
 
     logServerError(error);
 
-    return res.status(500).json({
-        success: false,
-        message: 'An unexpected error occurred',
-    });
+    return fail(res, 500, 'An unexpected error occurred');
 };
 
 export const notFound = (res, resource) => {
-    return res.status(404).json({
-        success: false,
-        message: `${resource} not found`,
-    });
+    return fail(res, 404, `${resource} not found`);
 };
