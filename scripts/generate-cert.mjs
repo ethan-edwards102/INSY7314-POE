@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import selfsigned from 'selfsigned';
