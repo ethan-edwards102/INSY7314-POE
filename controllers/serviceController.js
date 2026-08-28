@@ -4,7 +4,7 @@ import { ok, created } from '../utils/respond.js';
 
 export const createService = async (req, res) => {
     try {
-        const { category, rate, rateType } = req.body;
+        const { category, rate, rateType } = req.validated;
 
         const newService = await Service.create({
             category,
@@ -43,7 +43,7 @@ export const getServiceById = async (req, res) => {
 
 export const updateService = async (req, res) => {
     try {
-        const { category, rate, rateType } = req.body;
+        const { category, rate, rateType } = req.validated;
 
         const service = await Service.findByIdAndUpdate(
             req.params.id,

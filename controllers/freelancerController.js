@@ -4,7 +4,7 @@ import { ok, created } from '../utils/respond.js';
 
 export const createFreelancer = async (req, res) => {
     try {
-        const { name, services } = req.body;
+        const { name, services } = req.validated;
 
         const newFreelancer = await Freelancer.create({
             name,
@@ -42,7 +42,7 @@ export const getFreelancerById = async (req, res) => {
 
 export const updateFreelancer = async (req, res) => {
     try {
-        const { name, services } = req.body;
+        const { name, services } = req.validated;
 
         const freelancer = await Freelancer.findByIdAndUpdate(
             req.params.id,

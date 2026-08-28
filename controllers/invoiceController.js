@@ -4,7 +4,7 @@ import { ok, created } from '../utils/respond.js';
 
 export const createInvoice = async (req, res) => {
     try {
-        const { amount, dateIssued, pop } = req.body;
+        const { amount, dateIssued, pop } = req.validated;
 
         const newInvoice = await Invoice.create({
             amount,
@@ -43,7 +43,7 @@ export const getInvoiceById = async (req, res) => {
 
 export const updateInvoice = async (req, res) => {
     try {
-        const { amount, dateIssued, pop } = req.body;
+        const { amount, dateIssued, pop } = req.validated;
 
         const invoice = await Invoice.findByIdAndUpdate(
             req.params.id,

@@ -4,7 +4,7 @@ import { ok, created } from '../utils/respond.js';
 
 export const createBooking = async (req, res) => {
     try {
-        const { date, quantity, client, freelancer, service } = req.body;
+        const { date, quantity, client, freelancer, service } = req.validated;
 
         const newBooking = await Booking.create({
             date,
@@ -45,7 +45,7 @@ export const getBookingById = async (req, res) => {
 
 export const updateBooking = async (req, res) => {
     try {
-        const { date, quantity, client, freelancer, service } = req.body;
+        const { date, quantity, client, freelancer, service } = req.validated;
 
         const booking = await Booking.findByIdAndUpdate(
             req.params.id,

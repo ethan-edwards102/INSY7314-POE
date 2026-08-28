@@ -4,7 +4,7 @@ import { ok, created } from '../utils/respond.js';
 
 export const createPop = async (req, res) => {
     try {
-        const { datePaid } = req.body;
+        const { datePaid } = req.validated;
 
         const newPop = await Pop.create({
             datePaid,
@@ -41,7 +41,7 @@ export const getPopById = async (req, res) => {
 
 export const updatePop = async (req, res) => {
     try {
-        const { datePaid } = req.body;
+        const { datePaid } = req.validated;
 
         const pop = await Pop.findByIdAndUpdate(
             req.params.id,

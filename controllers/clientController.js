@@ -4,7 +4,7 @@ import { ok, created } from '../utils/respond.js';
 
 export const createClient = async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name } = req.validated;
 
         const newClient = await Client.create({
             name,
@@ -41,7 +41,7 @@ export const getClientById = async (req, res) => {
 
 export const updateClient = async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name } = req.validated;
 
         const client = await Client.findByIdAndUpdate(
             req.params.id,
