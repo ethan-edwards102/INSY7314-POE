@@ -46,7 +46,7 @@ export const updatePop = async (req, res) => {
         const pop = await Pop.findByIdAndUpdate(
             req.params.id,
             { datePaid },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
 
         if (!pop) {

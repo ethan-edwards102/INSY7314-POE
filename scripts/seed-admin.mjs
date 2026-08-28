@@ -42,7 +42,7 @@ if (password === PLACEHOLDER_PASSWORD) {
     process.exit(1);
 }
 
-// Verify the password before the database is touched. The schema would reject weak passwords anyway
+// Checked here as well as by the schema, so the message names the rule.
 if (!PASSWORD_PATTERN.test(password)) {
     console.error('ADMIN_PASSWORD does not meet the password rules.');
     console.error('It must be 8-72 characters and include an uppercase letter, a');
@@ -59,8 +59,7 @@ try {
         if (existing.role === 'Admin') {
             console.log(`${email} is already an Admin. Nothing to do.`);
         } else {
-            // Promote in place, leaving the password alone. This script must not
-            // double as a way to overwrite somebody's credentials.
+            // Promote in place. The password is not changed.
             const previousRole = existing.role;
             existing.role = 'Admin';
             await existing.save();
@@ -68,8 +67,8 @@ try {
             console.log('Their existing password was left unchanged.');
         }
     } else {
-        // .save() rather than an upsert, so the pre('save') hook runs and hashes
-        // the password. findOneAndUpdate skips it and stores the plain text.
+        // .save() runs the pre('save') hook that hashes the password.
+        // findOneAndUpdate skips it and stores the plain text.
         await new User({ name, email, password, role: 'Admin' }).save();
         console.log(`Created Admin ${email}.`);
         console.log('Sign in at POST /auth/login with the credentials from your .env.');

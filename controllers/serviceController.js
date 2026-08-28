@@ -48,7 +48,7 @@ export const updateService = async (req, res) => {
         const service = await Service.findByIdAndUpdate(
             req.params.id,
             { category, rate, rateType },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
 
         if (!service) {

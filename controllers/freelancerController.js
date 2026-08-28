@@ -47,7 +47,7 @@ export const updateFreelancer = async (req, res) => {
         const freelancer = await Freelancer.findByIdAndUpdate(
             req.params.id,
             { name, services },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
 
         if (!freelancer) {

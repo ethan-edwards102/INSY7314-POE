@@ -48,7 +48,7 @@ export const updateInvoice = async (req, res) => {
         const invoice = await Invoice.findByIdAndUpdate(
             req.params.id,
             { amount, dateIssued, pop },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
 
         if (!invoice) {

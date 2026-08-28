@@ -50,7 +50,7 @@ export const updateBooking = async (req, res) => {
         const booking = await Booking.findByIdAndUpdate(
             req.params.id,
             { date, quantity, client, freelancer, service },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
 
         if (!booking) {

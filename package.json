@@ -1,14 +1,14 @@
 {
   "name": "hustle-hub-plus",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
     "certs": "node scripts/generate-cert.mjs",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "test:api": "newman run postman/HustleHub-Plus.postman_collection.json --insecure",
-    "seed:admin": "node scripts/seed-admin.mjs"
+    "test:api": "node scripts/run-tests.mjs",
+    "seed:admin": "node scripts/seed-admin.mjs",
+    "db:reset": "node scripts/reset-db.mjs && npm run seed:admin"
   },
   "repository": {
     "type": "git",

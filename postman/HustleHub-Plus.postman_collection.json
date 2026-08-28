@@ -2,7 +2,7 @@
   "info": {
     "name": "HustleHub+ API",
     "_postman_id": "7f3c1e20-4b9a-4d61-9f2e-8c5a1d0b3e77",
-    "description": "# HustleHub+ API - Part 1\n\nCovers user registration, login and the existing marketplace endpoints.\n\n## Running the collection\n\n1. Start MongoDB, then run `npm run certs` once, then `npm start`.\n2. Check the `baseUrl` collection variable matches the port in your `.env` (default `https://localhost:5001`).\n3. The API uses a self-signed certificate, so turn off Settings > General > SSL certificate verification in Postman.\n4. Run the whole collection with the Postman runner, or send the requests individually from the top down.\n\nEvery run generates fresh email addresses, so the collection can be run repeatedly without clearing the database.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to confirm it is JSON and that it never contains a password hash, a file path or a stack trace.",
+    "description": "# HustleHub+ API, Part 1\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources.\n\n## Running the collection\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run `npm run test:api`. That feeds `baseUrl`, `adminEmail` and `adminPassword` in from\n   your `.env`, so the Admin password is never stored in this file.\n\nTo run it from the Postman app instead, turn off Settings > General > SSL certificate\nverification, because the development certificate is self signed, and create an\nenvironment supplying `adminEmail` and `adminPassword`.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 12 confirms the suite deleted every marketplace record it created.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -43,29 +43,26 @@
       "key": "baseUrl",
       "value": "https://localhost:5001",
       "type": "string"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@hustlehub.local",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "1. Registration - successful",
-      "description": "The happy paths required by the brief. Each run generates a fresh email address so the collection can be run repeatedly without clearing the database.",
+      "name": "1. Registration, successful",
+      "description": "Creates the four accounts the rest of the collection uses. They have fixed email addresses, so the suite expects an empty database. Run `npm run db:reset` first.",
       "item": [
         {
           "name": "Register a Client",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// A unique address per run keeps this request repeatable, and is reused",
-                  "// later by the duplicate-email tests.",
-                  "var address = 'client.' + Date.now() + '@example.com';",
-                  "pm.collectionVariables.set('clientEmail', address);",
-                  "pm.collectionVariables.set('clientEmailUpper', address.toUpperCase());"
-                ]
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -76,28 +73,29 @@
                   "});",
                   "",
                   "var body = pm.response.json();",
-                  "",
-                  "pm.test('Reports success', function () {",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
                   "    pm.expect(body.success).to.be.true;",
                   "    pm.expect(body.message).to.eql('Registration successful');",
                   "});",
                   "",
                   "pm.test('Returns the created account', function () {",
                   "    pm.expect(body.data).to.have.property('_id');",
-                  "    pm.expect(body.data.email).to.eql(pm.collectionVariables.get('clientEmail').toLowerCase());",
+                  "    pm.expect(body.data.email).to.eql('tyreece.s@hustlehub.test');",
+                  "    pm.expect(body.data.role).to.eql('Client');",
                   "});",
                   "",
-                  "pm.test('Defaults the role to Client', function () {",
-                  "    pm.expect(body.data.role).to.eql('Client');",
+                  "pm.test('Issues a JWT', function () {",
+                  "    pm.expect(body.token).to.be.a('string');",
+                  "    pm.expect(body.token.split('.')).to.have.lengthOf(3);",
                   "});",
                   "",
                   "pm.test('Never returns the password', function () {",
                   "    pm.expect(body.data).to.not.have.property('password');",
+                  "    pm.expect(pm.response.text()).to.not.include('$2b$');",
                   "});",
                   "",
-                  "pm.test('Response body contains no password hash', function () {",
-                  "    pm.expect(pm.response.text()).to.not.include('$2b$');",
-                  "});"
+                  "pm.collectionVariables.set('tyreeceId', body.data._id);"
                 ]
               }
             }
@@ -123,69 +121,7 @@
             "description": "Registers an account with no role supplied, which should default to Client.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Dylan Olsen\",\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"Str0ng!Pass\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Register a Freelancer",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.collectionVariables.set('freelancerEmail', 'freelancer.' + Date.now() + '@example.com');"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "pm.test('Stores the requested role', function () {",
-                  "    pm.expect(pm.response.json().data.role).to.eql('Freelancer');",
-                  "});",
-                  "",
-                  "pm.test('Response body contains no password hash', function () {",
-                  "    pm.expect(pm.response.text()).to.not.include('$2b$');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "register"
-              ]
-            },
-            "description": "Registers an account with an explicitly chosen, permitted role.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Bob Jones\",\n  \"email\": \"{{freelancerEmail}}\",\n  \"password\": \"An0ther!Pw\",\n  \"role\": \"Freelancer\"\n}",
+              "raw": "{\n  \"name\": \"Tyreece S\",\n  \"email\": \"tyreece.s@hustlehub.test\",\n  \"password\": \"Tyreece!Pass1\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -198,15 +134,6 @@
           "name": "Unexpected fields are ignored",
           "event": [
             {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.collectionVariables.set('extraEmail', 'extra.' + Date.now() + '@example.com');"
-                ]
-              }
-            },
-            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -216,14 +143,35 @@
                   "});",
                   "",
                   "var body = pm.response.json();",
-                  "",
-                  "pm.test('Ignores the _id supplied by the caller', function () {",
-                  "    pm.expect(body.data._id).to.not.eql('000000000000000000000000');",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Registration successful');",
                   "});",
                   "",
-                  "pm.test('Does not store the unexpected fields', function () {",
+                  "pm.test('Returns the created account', function () {",
+                  "    pm.expect(body.data).to.have.property('_id');",
+                  "    pm.expect(body.data.email).to.eql('dylan.olsen@hustlehub.test');",
+                  "    pm.expect(body.data.role).to.eql('Client');",
+                  "});",
+                  "",
+                  "pm.test('Issues a JWT', function () {",
+                  "    pm.expect(body.token).to.be.a('string');",
+                  "    pm.expect(body.token.split('.')).to.have.lengthOf(3);",
+                  "});",
+                  "",
+                  "pm.test('Never returns the password', function () {",
+                  "    pm.expect(body.data).to.not.have.property('password');",
+                  "    pm.expect(pm.response.text()).to.not.include('$2b$');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('dylanId', body.data._id);",
+                  "",
+                  "pm.test('Ignores the fields a caller may not set', function () {",
+                  "    pm.expect(body.data._id).to.not.eql('000000000000000000000000');",
                   "    pm.expect(body.data).to.not.have.property('isAdmin');",
-                  "    pm.expect(body.data.createdAt).to.not.include('1999');",
+                  "    pm.expect(new Date(body.data.createdAt).getFullYear()).to.be.above(2000);",
+                  "    pm.expect(body.data).to.not.have.property('password_hash');",
                   "});"
                 ]
               }
@@ -247,10 +195,150 @@
                 "register"
               ]
             },
-            "description": "Sends _id, createdAt and isAdmin alongside the real fields. The API should discard them rather than write them to the new document, which is the defence against mass assignment.",
+            "description": "The body carries four fields the API never accepts from a caller. Registration reads only name, email, password and role from req.validated, so the extras are discarded and the account comes back as a Client with a server generated id. Self assigning the Admin role is covered separately in section 2.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Mass Assignment\",\n  \"email\": \"{{extraEmail}}\",\n  \"password\": \"Str0ng!Pass\",\n  \"_id\": \"000000000000000000000000\",\n  \"isAdmin\": true,\n  \"createdAt\": \"1999-01-01T00:00:00.000Z\"\n}",
+              "raw": "{\n  \"name\": \"Dylan Olsen\",\n  \"email\": \"dylan.olsen@hustlehub.test\",\n  \"password\": \"Dylan!Pass1\",\n  \"_id\": \"000000000000000000000000\",\n  \"isAdmin\": true,\n  \"createdAt\": \"1999-01-01T00:00:00.000Z\",\n  \"password_hash\": \"not-mine-to-set\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register a Freelancer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var body = pm.response.json();",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Registration successful');",
+                  "});",
+                  "",
+                  "pm.test('Returns the created account', function () {",
+                  "    pm.expect(body.data).to.have.property('_id');",
+                  "    pm.expect(body.data.email).to.eql('ethan.edwards@hustlehub.test');",
+                  "    pm.expect(body.data.role).to.eql('Freelancer');",
+                  "});",
+                  "",
+                  "pm.test('Issues a JWT', function () {",
+                  "    pm.expect(body.token).to.be.a('string');",
+                  "    pm.expect(body.token.split('.')).to.have.lengthOf(3);",
+                  "});",
+                  "",
+                  "pm.test('Never returns the password', function () {",
+                  "    pm.expect(body.data).to.not.have.property('password');",
+                  "    pm.expect(pm.response.text()).to.not.include('$2b$');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('ethanId', body.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Registers an account with the Freelancer role sent explicitly.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ethan Edwards\",\n  \"email\": \"ethan.edwards@hustlehub.test\",\n  \"password\": \"Ethan!Pass1\",\n  \"role\": \"Freelancer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register a second Freelancer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var body = pm.response.json();",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Registration successful');",
+                  "});",
+                  "",
+                  "pm.test('Returns the created account', function () {",
+                  "    pm.expect(body.data).to.have.property('_id');",
+                  "    pm.expect(body.data.email).to.eql('ndumsio.j@hustlehub.test');",
+                  "    pm.expect(body.data.role).to.eql('Freelancer');",
+                  "});",
+                  "",
+                  "pm.test('Issues a JWT', function () {",
+                  "    pm.expect(body.token).to.be.a('string');",
+                  "    pm.expect(body.token.split('.')).to.have.lengthOf(3);",
+                  "});",
+                  "",
+                  "pm.test('Never returns the password', function () {",
+                  "    pm.expect(body.data).to.not.have.property('password');",
+                  "    pm.expect(pm.response.text()).to.not.include('$2b$');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('ndumsioId', body.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "A second Freelancer, so the collection has one account of each role to work with.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ndumsio J\",\n  \"email\": \"ndumsio.j@hustlehub.test\",\n  \"password\": \"Ndumsio!Pass1\",\n  \"role\": \"Freelancer\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -265,8 +353,8 @@
       }
     },
     {
-      "name": "2. Registration - invalid scenarios",
-      "description": "The invalid and malicious cases the brief requires to be handled. Every one must be answered with a controlled JSON response that exposes no internal detail.",
+      "name": "2. Registration, invalid scenarios",
+      "description": "Every request here is refused, so none of them leaves a record behind.",
       "item": [
         {
           "name": "Duplicate email is rejected",
@@ -280,8 +368,10 @@
                   "    pm.response.to.have.status(409);",
                   "});",
                   "",
-                  "pm.test('Explains that the account already exists', function () {",
-                  "    pm.expect(pm.response.json().message).to.include('already exists');",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('An account with that email already exists');",
                   "});"
                 ]
               }
@@ -305,10 +395,10 @@
                 "register"
               ]
             },
-            "description": "Re-registers the address created by the first request. Uniqueness is enforced by the index on the collection, so this arrives as a duplicate key error and must be reported as a conflict rather than a server fault.",
+            "description": "The unique index on User.email is what rejects this, not a lookup before the write, so two simultaneous requests cannot both get through.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Dylan Olsen\",\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "raw": "{\n  \"name\": \"Tyreece S\",\n  \"email\": \"tyreece.s@hustlehub.test\",\n  \"password\": \"Tyreece!Pass1\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -350,10 +440,10 @@
                 "register"
               ]
             },
-            "description": "Addresses are lowercased before storage, so changing the case must not allow a second account.",
+            "description": "Addresses are lowercased before they are stored, so case cannot be used to register twice.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Dylan Olsen\",\n  \"email\": \"{{clientEmailUpper}}\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "raw": "{\n  \"name\": \"Tyreece S\",\n  \"email\": \"TYREECE.S@HUSTLEHUB.TEST\",\n  \"password\": \"Tyreece!Pass1\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -363,7 +453,7 @@
           }
         },
         {
-          "name": "Admin role cannot be self-assigned",
+          "name": "Admin role cannot be self assigned",
           "event": [
             {
               "listen": "test",
@@ -380,9 +470,16 @@
                   "    pm.expect(body.message).to.eql('Validation failed');",
                   "});",
                   "",
-                  "pm.test(\"Identifies 'role' as the offending field\", function () {",
+                  "pm.test('Names the field that failed', function () {",
                   "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include('role');",
+                  "    pm.expect(fields).to.include.members(['role']);",
+                  "});",
+                  "",
+                  "pm.test('Lists only the roles a caller may choose', function () {",
+                  "    var message = pm.response.json().errors[0].message;",
+                  "    pm.expect(message).to.include('Client');",
+                  "    pm.expect(message).to.include('Freelancer');",
+                  "    pm.expect(message).to.not.include('Admin');",
                   "});"
                 ]
               }
@@ -406,10 +503,10 @@
                 "register"
               ]
             },
-            "description": "Privilege escalation attempt. A caller must not be able to grant itself the Admin role at registration.",
+            "description": "Admin is a valid role in the model but not a valid choice at registration. The only way to create one is `npm run seed:admin`, which needs database access.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Sneaky User\",\n  \"email\": \"sneaky@example.com\",\n  \"password\": \"Str0ng!Pass\",\n  \"role\": \"Admin\"\n}",
+              "raw": "{\n  \"name\": \"Ndumsio J\",\n  \"email\": \"sneaky@hustlehub.test\",\n  \"password\": \"Str0ng!Pass\",\n  \"role\": \"Admin\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -430,10 +527,19 @@
                   "    pm.response.to.have.status(400);",
                   "});",
                   "",
-                  "pm.test('Refuses a non-string email', function () {",
-                  "    var errors = pm.response.json().errors;",
-                  "    pm.expect(errors[0].field).to.eql('email');",
-                  "    pm.expect(errors[0].message).to.include('must be text');",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['email']);",
+                  "});",
+                  "",
+                  "pm.test('Refuses the object outright rather than querying with it', function () {",
+                  "    pm.expect(pm.response.json().errors[0].message).to.eql('Email must be text');",
                   "});"
                 ]
               }
@@ -457,7 +563,7 @@
                 "register"
               ]
             },
-            "description": "Sends a Mongo query operator in place of the email string. If it reached the database it could match a document without knowing the real address, so anything that is not a string must be refused.",
+            "description": "A JSON object where a string belongs. Handing that to a query would match a document without knowing the real value, so anything that is not a string is refused.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Injection Test\",\n  \"email\": { \"$ne\": null },\n  \"password\": \"Str0ng!Pass\"\n}",
@@ -481,9 +587,19 @@
                   "    pm.response.to.have.status(400);",
                   "});",
                   "",
-                  "pm.test('Reports name, email and password together', function () {",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
                   "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.have.members(['name', 'email', 'password']);",
+                  "    pm.expect(fields).to.include.members(['name', 'email', 'password']);",
+                  "});",
+                  "",
+                  "pm.test('Reports all three at once', function () {",
+                  "    pm.expect(pm.response.json().errors).to.have.lengthOf(3);",
                   "});"
                 ]
               }
@@ -507,7 +623,7 @@
                 "register"
               ]
             },
-            "description": "An empty body should report every missing field at once rather than failing on the first.",
+            "description": "Every problem in the body is reported together, so a caller fixes one request instead of discovering the fields one at a time.",
             "body": {
               "mode": "raw",
               "raw": "{}",
@@ -537,9 +653,9 @@
                   "    pm.expect(body.message).to.eql('Validation failed');",
                   "});",
                   "",
-                  "pm.test(\"Identifies 'password' as the offending field\", function () {",
+                  "pm.test('Names the field that failed', function () {",
                   "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include('password');",
+                  "    pm.expect(fields).to.include.members(['password']);",
                   "});"
                 ]
               }
@@ -563,10 +679,10 @@
                 "register"
               ]
             },
-            "description": "The password rule requires 8-72 characters with upper case, lower case, a digit and a symbol.",
+            "description": "Eight characters is long enough, but there is no uppercase letter, digit or symbol.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Weak Password\",\n  \"email\": \"weak@example.com\",\n  \"password\": \"password\"\n}",
+              "raw": "{\n  \"name\": \"Ethan Edwards\",\n  \"email\": \"weak@hustlehub.test\",\n  \"password\": \"password\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -593,9 +709,9 @@
                   "    pm.expect(body.message).to.eql('Validation failed');",
                   "});",
                   "",
-                  "pm.test(\"Identifies 'email' as the offending field\", function () {",
+                  "pm.test('Names the field that failed', function () {",
                   "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include('email');",
+                  "    pm.expect(fields).to.include.members(['email']);",
                   "});"
                 ]
               }
@@ -621,7 +737,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Bad Email\",\n  \"email\": \"not-an-email\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "raw": "{\n  \"name\": \"Dylan Olsen\",\n  \"email\": \"not-an-email\",\n  \"password\": \"Str0ng!Pass\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -648,9 +764,9 @@
                   "    pm.expect(body.message).to.eql('Validation failed');",
                   "});",
                   "",
-                  "pm.test(\"Identifies 'name' as the offending field\", function () {",
+                  "pm.test('Names the field that failed', function () {",
                   "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include('name');",
+                  "    pm.expect(fields).to.include.members(['name']);",
                   "});"
                 ]
               }
@@ -674,10 +790,10 @@
                 "register"
               ]
             },
-            "description": "The name field is whitelisted to letters, spaces, hyphens and apostrophes, so markup never reaches the database.",
+            "description": "Names are held to a pattern of letters, spaces, hyphens and apostrophes, so markup never reaches the database in the first place.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<script>alert(1)</script>\",\n  \"email\": \"xss@example.com\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "raw": "{\n  \"name\": \"<script>alert(1)</script>\",\n  \"email\": \"xss@hustlehub.test\",\n  \"password\": \"Str0ng!Pass\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -698,7 +814,7 @@
                   "    pm.response.to.have.status(400);",
                   "});",
                   "",
-                  "pm.test('Reports the parse failure without a stack trace', function () {",
+                  "pm.test('Answers with JSON, not the Express HTML error page', function () {",
                   "    pm.expect(pm.response.json().message).to.eql('Request body is not valid JSON');",
                   "});"
                 ]
@@ -723,10 +839,10 @@
                 "register"
               ]
             },
-            "description": "A truncated body fails in the JSON parser before any application code runs. Without a central error handler Express answers this with an HTML stack trace.",
+            "description": "The body parser throws before any of our code runs. Without the error handling middleware Express would answer with a stack trace as an HTML page.",
             "body": {
               "mode": "raw",
-              "raw": "{\"name\": \"Broken\",",
+              "raw": "{\n  \"name\": \"Broken\",\n  \"email\": \"broken@hustlehub.test\",\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -758,8 +874,8 @@
                   "    pm.response.to.have.status(413);",
                   "});",
                   "",
-                  "pm.test('Explains that the body is too large', function () {",
-                  "    pm.expect(pm.response.json().message).to.include('too large');",
+                  "pm.test('Names the size as the reason', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Request body is too large');",
                   "});"
                 ]
               }
@@ -783,10 +899,10 @@
                 "register"
               ]
             },
-            "description": "Bodies are capped so an oversized payload cannot be used to exhaust server memory.",
+            "description": "The 10kb body limit stops an oversized payload being used to exhaust server memory.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"{{oversizedName}}\",\n  \"email\": \"big@example.com\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "raw": "{\n  \"name\": \"{{oversizedName}}\",\n  \"email\": \"big@hustlehub.test\",\n  \"password\": \"Str0ng!Pass\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -807,7 +923,7 @@
                   "    pm.response.to.have.status(404);",
                   "});",
                   "",
-                  "pm.test('Returns JSON rather than an HTML error page', function () {",
+                  "pm.test('Answers with JSON, not the Express HTML error page', function () {",
                   "    pm.expect(pm.response.json().message).to.eql('Route not found');",
                   "});"
                 ]
@@ -823,19 +939,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/auth/registerr",
+              "raw": "{{baseUrl}}/auth/regsiter",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "auth",
-                "registerr"
+                "regsiter"
               ]
             },
-            "description": "A mistyped path must return controlled JSON, not an HTML error page.",
+            "description": "A misspelled path. The catch all handler answers in the same shape as every other error.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Dylan Olsen\",\n  \"email\": \"typo@example.com\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "raw": "{\n  \"name\": \"Tyreece S\",\n  \"email\": \"typo@hustlehub.test\",\n  \"password\": \"Str0ng!Pass\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -851,7 +967,7 @@
     },
     {
       "name": "3. Login",
-      "description": "Written against the agreed contract ahead of the login endpoint being built. While POST /auth/login returns 404 these assertions report as skipped.",
+      "description": "Signs in a Client and the Admin, and checks that a failed login gives nothing away.",
       "item": [
         {
           "name": "Log in with valid credentials",
@@ -865,26 +981,33 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Returns a JWT', function () {",
-                  "    var token = pm.response.json().token;",
-                  "    pm.expect(token).to.be.a('string');",
-                  "    pm.expect(token.split('.')).to.have.lengthOf(3);",
-                  "    pm.collectionVariables.set('authToken', token);",
+                  "var body = pm.response.json();",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Login successful');",
                   "});",
                   "",
-                  "pm.test('Token payload carries the id and role', function () {",
+                  "pm.test('Returns a JWT', function () {",
+                  "    pm.expect(body.token).to.be.a('string');",
+                  "    pm.expect(body.token.split('.')).to.have.lengthOf(3);",
+                  "});",
+                  "",
+                  "pm.test('Token payload carries the id and the role', function () {",
                   "    // The payload is base64url, so the two characters that differ from plain",
                   "    // base64 are translated before decoding. Postman's sandbox deprecates the",
                   "    // browser decoder, hence Buffer.",
-                  "    var segment = pm.response.json().token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "    var segment = body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
                   "    var payload = JSON.parse(Buffer.from(segment, 'base64').toString('utf8'));",
-                  "    pm.expect(payload).to.have.property('id');",
-                  "    pm.expect(payload).to.have.property('role');",
+                  "    pm.expect(payload.id).to.eql(pm.collectionVariables.get('tyreeceId'));",
+                  "    pm.expect(payload.role).to.eql('Client');",
                   "});",
                   "",
-                  "pm.test('Token payload carries no password hash', function () {",
+                  "pm.test('Nothing in the response is a password hash', function () {",
                   "    pm.expect(pm.response.text()).to.not.include('$2b$');",
-                  "});"
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('authToken', body.token);"
                 ]
               }
             }
@@ -907,9 +1030,69 @@
                 "login"
               ]
             },
+            "description": "The token stored here is what every protected request in the collection sends.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "raw": "{\n  \"email\": \"tyreece.s@hustlehub.test\",\n  \"password\": \"Tyreece!Pass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Log in as the Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var body = pm.response.json();",
+                  "",
+                  "pm.test('Signs in the account created by npm run seed:admin', function () {",
+                  "    pm.expect(body.data.role).to.eql('Admin');",
+                  "});",
+                  "",
+                  "pm.test('Returns a JWT carrying the Admin role', function () {",
+                  "    var segment = body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "    var payload = JSON.parse(Buffer.from(segment, 'base64').toString('utf8'));",
+                  "    pm.expect(payload.role).to.eql('Admin');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('adminToken', body.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "The credentials come from ADMIN_EMAIL and ADMIN_PASSWORD in .env, fed in by `npm run test:api`. Running the collection from the Postman app instead means setting adminEmail and adminPassword in a Postman environment, so the password is never committed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -931,7 +1114,7 @@
                   "});",
                   "",
                   "pm.test('Returns the same generic message for either wrong credential', function () {",
-                  "        pm.expect(pm.response.json().message).to.eql('Invalid email or password');",
+                  "    pm.expect(pm.response.json().message).to.eql('Invalid email or password');",
                   "});"
                 ]
               }
@@ -957,7 +1140,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"WrongPassw0rd!\"\n}",
+              "raw": "{\n  \"email\": \"tyreece.s@hustlehub.test\",\n  \"password\": \"WrongPassw0rd!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -976,6 +1159,10 @@
                 "exec": [
                   "pm.test('Status code is 401', function () {",
                   "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Gives nothing away about which accounts exist', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Invalid email or password');",
                   "});"
                 ]
               }
@@ -999,9 +1186,10 @@
                 "login"
               ]
             },
+            "description": "The message is identical to the wrong password case, so the response cannot be used to work out which addresses have accounts.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"password\": \"Str0ng!Pass\"\n}",
+              "raw": "{\n  \"email\": \"nobody@hustlehub.test\",\n  \"password\": \"Str0ng!Pass\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1016,8 +1204,535 @@
       }
     },
     {
-      "name": "4. Marketplace endpoints",
-      "description": "Smoke coverage of the existing service, client and booking endpoints, so the collection demonstrates the wider API alongside authentication.",
+      "name": "4. Authentication required",
+      "description": "Protected routes with no token, a broken token, and a forged one.",
+      "item": [
+        {
+          "name": "Listing services without a token is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Names authentication as the reason', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Authentication required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "description": "Every marketplace route sits behind the authenticate middleware."
+          }
+        },
+        {
+          "name": "Creating a service without a token is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Refuses before the body is even validated', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Authentication required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "description": "Authentication runs before validation, so a valid body still gets nowhere.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"DogGrooming\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A malformed Authorization header is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Names authentication as the reason', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Authentication required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Token {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "description": "The header is present but not in the Bearer scheme the API expects."
+          }
+        },
+        {
+          "name": "A token that is not a JWT is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Reports an invalid token rather than a server error', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Invalid token');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer not-a-real-token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "description": "A garbage token is an authentication failure, not a 500."
+          }
+        },
+        {
+          "name": "A forged Admin token is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Rejects a well formed token signed by somebody else', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Invalid token');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMCIsInJvbGUiOiJBZG1pbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.ZmFrZS1zaWduYXR1cmUtbm90LXNpZ25lZC1ieS10aGlzLXNlcnZlcg"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "description": "This token is structurally valid and its payload claims role Admin, but it was signed with a different secret. The signature check is what stops a caller writing their own token."
+          }
+        }
+      ],
+      "auth": {
+        "type": "noauth"
+      }
+    },
+    {
+      "name": "5. Role enforcement",
+      "description": "PATCH /users/:id/role is the only Admin only route. A Client is refused, the Admin is not.",
+      "item": [
+        {
+          "name": "A Client cannot change a role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test('Refuses on the role, not on the token', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('You do not have permission to perform this action');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{dylanId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{dylanId}}",
+                "role"
+              ]
+            },
+            "description": "Sent with a Client's token. The caller is authenticated, so this is authorisation failing, which is why it is a 403 and not a 401.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "An Admin can change a role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Role updated');",
+                  "});",
+                  "",
+                  "pm.test('Returns the updated account', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.data._id).to.eql(pm.collectionVariables.get('dylanId'));",
+                  "    pm.expect(body.data.role).to.eql('Freelancer');",
+                  "});",
+                  "",
+                  "pm.test('Never returns the password', function () {",
+                  "    pm.expect(pm.response.json().data).to.not.have.property('password');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{dylanId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{dylanId}}",
+                "role"
+              ]
+            },
+            "description": "The same request as above, sent with the Admin token. This is the endpoint the seeded Admin exists to make reachable.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Freelancer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "An Admin cannot set a role that does not exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['role']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{dylanId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{dylanId}}",
+                "role"
+              ]
+            },
+            "description": "Being an Admin does not exempt the request from validation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Superuser\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Changing the role of an unknown account returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Reports the account as not found', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('User not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/000000000000000000000000/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "000000000000000000000000",
+                "role"
+              ]
+            },
+            "description": "A well formed id that matches nobody.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Freelancer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Restore the original role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Leaves the cast as the suite found it', function () {",
+                  "    pm.expect(pm.response.json().data.role).to.eql('Client');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{dylanId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{dylanId}}",
+                "role"
+              ]
+            },
+            "description": "Undoes the promotion above, so the four accounts end the run in the state section 1 created them in.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Client\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Services",
+      "description": "A service through its whole life: create, list, read, update, delete, confirm it is gone.",
       "item": [
         {
           "name": "Create a service",
@@ -1035,7 +1750,14 @@
                   "    var body = pm.response.json();",
                   "    pm.expect(body.success).to.be.true;",
                   "    pm.expect(body.message).to.eql('Service created');",
-                  "    pm.expect(body.data).to.be.an('object');",
+                  "});",
+                  "",
+                  "pm.test('Stores what was sent', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data).to.have.property('_id');",
+                  "    pm.expect(data.category).to.eql('DogGrooming');",
+                  "    pm.expect(data.rate).to.eql(250);",
+                  "    pm.expect(data.rateType).to.eql('Hour');",
                   "});",
                   "",
                   "pm.collectionVariables.set('serviceId', pm.response.json().data._id);"
@@ -1072,7 +1794,147 @@
           }
         },
         {
-          "name": "Reject an unknown service category",
+          "name": "List services",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Services retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns a counted list containing the new record', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "    pm.expect(body.count).to.eql(body.data.length);",
+                  "    var ids = body.data.map(function (entry) { return entry._id; });",
+                  "    pm.expect(ids).to.include(pm.collectionVariables.get('serviceId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get the service by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Service retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns the record that was just created', function () {",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('serviceId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services/{{serviceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update the service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Service updated');",
+                  "});",
+                  "",
+                  "pm.test('Returns the changed record', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('serviceId'));",
+                  "    pm.expect(data.rate).to.eql(300);",
+                  "    pm.expect(data.rateType).to.eql('Day');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services/{{serviceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"DogGrooming\",\n  \"rate\": 300,\n  \"rateType\": \"Day\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject an invalid service",
           "event": [
             {
               "listen": "test",
@@ -1089,9 +1951,68 @@
                   "    pm.expect(body.message).to.eql('Validation failed');",
                   "});",
                   "",
-                  "pm.test(\"Identifies 'category' as the offending field\", function () {",
+                  "pm.test('Names the field that failed', function () {",
                   "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include('category');",
+                  "    pm.expect(fields).to.include.members(['category']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Hacking\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject a negative rate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['rate']);",
+                  "});",
+                  "",
+                  "pm.test('Explains the bound that was broken', function () {",
+                  "    pm.expect(pm.response.json().errors[0].message).to.eql('Rate must be 0 or more');",
                   "});"
                 ]
               }
@@ -1116,7 +2037,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"category\": \"Hacking\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
+              "raw": "{\n  \"category\": \"HouseCleaning\",\n  \"rate\": -5,\n  \"rateType\": \"Hour\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1125,6 +2046,88 @@
             }
           }
         },
+        {
+          "name": "Delete the service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Service deleted');",
+                  "});",
+                  "",
+                  "pm.test('Carries no data with the confirmation', function () {",
+                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services/{{serviceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "The deleted service is gone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Reports it as not found', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Service not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services/{{serviceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Clients",
+      "description": "A client record through its whole life, plus the malformed id case.",
+      "item": [
         {
           "name": "Create a client",
           "event": [
@@ -1141,7 +2144,12 @@
                   "    var body = pm.response.json();",
                   "    pm.expect(body.success).to.be.true;",
                   "    pm.expect(body.message).to.eql('Client created');",
-                  "    pm.expect(body.data).to.be.an('object');",
+                  "});",
+                  "",
+                  "pm.test('Stores what was sent', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data).to.have.property('_id');",
+                  "    pm.expect(data.name).to.eql('Tyreece S');",
                   "});",
                   "",
                   "pm.collectionVariables.set('clientId', pm.response.json().data._id);"
@@ -1168,7 +2176,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Jane Smith\"\n}",
+              "raw": "{\n  \"name\": \"Tyreece S\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1177,6 +2185,1436 @@
             }
           }
         },
+        {
+          "name": "List clients",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Clients retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns a counted list containing the new record', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "    pm.expect(body.count).to.eql(body.data.length);",
+                  "    var ids = body.data.map(function (entry) { return entry._id; });",
+                  "    pm.expect(ids).to.include(pm.collectionVariables.get('clientId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get the client by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Client retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns the record that was just created', function () {",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('clientId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients/{{clientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "{{clientId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update the client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Client updated');",
+                  "});",
+                  "",
+                  "pm.test('Returns the changed record', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('clientId'));",
+                  "    pm.expect(data.name).to.eql('Dylan Olsen');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients/{{clientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "{{clientId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dylan Olsen\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject an invalid client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['name']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"<script>alert(1)</script>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject a malformed id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Reports the bad value without exposing internals', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.include('Invalid value');",
+                  "    pm.expect(body.message).to.not.include('CastError');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients/not-a-valid-id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "not-a-valid-id"
+              ]
+            },
+            "description": "A value Mongo cannot read as an ObjectId. The message names the field without repeating the driver error."
+          }
+        },
+        {
+          "name": "Delete the client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Client deleted');",
+                  "});",
+                  "",
+                  "pm.test('Carries no data with the confirmation', function () {",
+                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients/{{clientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "{{clientId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "The deleted client is gone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Reports it as not found', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Client not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients/{{clientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "{{clientId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Freelancers",
+      "description": "A freelancer through its whole life. The embedded services list is validated entry by entry.",
+      "item": [
+        {
+          "name": "Create a freelancer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Freelancer created');",
+                  "});",
+                  "",
+                  "pm.test('Stores what was sent', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data).to.have.property('_id');",
+                  "    pm.expect(data.name).to.eql('Ethan Edwards');",
+                  "    pm.expect(data.services).to.have.lengthOf(1);",
+                  "    pm.expect(data.services[0].category).to.eql('HouseCleaning');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('freelancerId', pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/freelancers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "freelancers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ethan Edwards\",\n  \"services\": [\n    {\n      \"category\": \"HouseCleaning\",\n      \"rate\": 180,\n      \"rateType\": \"Hour\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List freelancers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Freelancers retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns a counted list containing the new record', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "    pm.expect(body.count).to.eql(body.data.length);",
+                  "    var ids = body.data.map(function (entry) { return entry._id; });",
+                  "    pm.expect(ids).to.include(pm.collectionVariables.get('freelancerId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/freelancers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "freelancers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get the freelancer by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Freelancer retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns the record that was just created', function () {",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('freelancerId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/freelancers/{{freelancerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "freelancers",
+                "{{freelancerId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update the freelancer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Freelancer updated');",
+                  "});",
+                  "",
+                  "pm.test('Returns the changed record', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('freelancerId'));",
+                  "    pm.expect(data.name).to.eql('Ndumsio J');",
+                  "    pm.expect(data.services).to.have.lengthOf(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/freelancers/{{freelancerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "freelancers",
+                "{{freelancerId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ndumsio J\",\n  \"services\": [\n    {\n      \"category\": \"DogGrooming\",\n      \"rate\": 220,\n      \"rateType\": \"Day\"\n    },\n    {\n      \"category\": \"HouseCleaning\",\n      \"rate\": 180,\n      \"rateType\": \"Hour\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject an invalid freelancer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['services[0].category', 'services[0].rate']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/freelancers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "freelancers"
+              ]
+            },
+            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ethan Edwards\",\n  \"services\": [\n    {\n      \"category\": \"Hacking\",\n      \"rate\": -1,\n      \"rateType\": \"Hour\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject a services list that is not a list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['services']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/freelancers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "freelancers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ethan Edwards\",\n  \"services\": \"HouseCleaning\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete the freelancer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Freelancer deleted');",
+                  "});",
+                  "",
+                  "pm.test('Carries no data with the confirmation', function () {",
+                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/freelancers/{{freelancerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "freelancers",
+                "{{freelancerId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "The deleted freelancer is gone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Reports it as not found', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Freelancer not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/freelancers/{{freelancerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "freelancers",
+                "{{freelancerId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Invoices",
+      "description": "An invoice through its whole life, including a nested proof of payment.",
+      "item": [
+        {
+          "name": "Create a invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Invoice created');",
+                  "});",
+                  "",
+                  "pm.test('Stores what was sent', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data).to.have.property('_id');",
+                  "    pm.expect(data.amount).to.eql(1500);",
+                  "    pm.expect(data.pop).to.have.property('datePaid');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('invoiceId', pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invoices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1500,\n  \"dateIssued\": \"2026-09-01T09:00:00.000Z\",\n  \"pop\": {\n    \"datePaid\": \"2026-09-02T09:00:00.000Z\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List invoices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Invoices retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns a counted list containing the new record', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "    pm.expect(body.count).to.eql(body.data.length);",
+                  "    var ids = body.data.map(function (entry) { return entry._id; });",
+                  "    pm.expect(ids).to.include(pm.collectionVariables.get('invoiceId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get the invoice by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Invoice retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns the record that was just created', function () {",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('invoiceId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoices/{{invoiceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices",
+                "{{invoiceId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update the invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Invoice updated');",
+                  "});",
+                  "",
+                  "pm.test('Returns the changed record', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('invoiceId'));",
+                  "    pm.expect(data.amount).to.eql(1750);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invoices/{{invoiceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices",
+                "{{invoiceId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1750,\n  \"dateIssued\": \"2026-09-01T09:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject an invalid invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['amount', 'pop.datePaid']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invoices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices"
+              ]
+            },
+            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": -5,\n  \"pop\": {\n    \"datePaid\": \"not-a-date\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject a non numeric amount",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['amount']);",
+                  "});",
+                  "",
+                  "pm.test('Refuses an operator object where a number belongs', function () {",
+                  "    pm.expect(pm.response.json().errors[0].message).to.eql('Amount must be a number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invoices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices"
+              ]
+            },
+            "description": "The same NoSQL injection shape as the registration test, on a numeric field.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": { \"$gt\": 0 }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete the invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Invoice deleted');",
+                  "});",
+                  "",
+                  "pm.test('Carries no data with the confirmation', function () {",
+                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoices/{{invoiceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices",
+                "{{invoiceId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "The deleted invoice is gone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Reports it as not found', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Invoice not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoices/{{invoiceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices",
+                "{{invoiceId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Pops",
+      "description": "A proof of payment through its whole life. The date defaults when it is left out.",
+      "item": [
+        {
+          "name": "Create a pop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Pop created');",
+                  "});",
+                  "",
+                  "pm.test('Stores what was sent', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data).to.have.property('_id');",
+                  "    pm.expect(data.datePaid).to.include('2026-09-02');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('popId', pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pops",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pops"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"datePaid\": \"2026-09-02T09:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List pops",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Pops retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns a counted list containing the new record', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "    pm.expect(body.count).to.eql(body.data.length);",
+                  "    var ids = body.data.map(function (entry) { return entry._id; });",
+                  "    pm.expect(ids).to.include(pm.collectionVariables.get('popId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pops",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pops"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get the pop by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Pop retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns the record that was just created', function () {",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('popId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pops/{{popId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pops",
+                "{{popId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update the pop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Pop updated');",
+                  "});",
+                  "",
+                  "pm.test('Returns the changed record', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('popId'));",
+                  "    pm.expect(data.datePaid).to.include('2026-09-03');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pops/{{popId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pops",
+                "{{popId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"datePaid\": \"2026-09-03T09:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject an invalid pop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['datePaid']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pops",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pops"
+              ]
+            },
+            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"datePaid\": \"not-a-date\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete the pop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Pop deleted');",
+                  "});",
+                  "",
+                  "pm.test('Carries no data with the confirmation', function () {",
+                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pops/{{popId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pops",
+                "{{popId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "The deleted pop is gone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Reports it as not found', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Pop not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pops/{{popId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pops",
+                "{{popId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Bookings",
+      "description": "A booking through its whole life. Client, freelancer and service are embedded copies, so each one is validated as part of the booking.",
+      "item": [
         {
           "name": "Create a booking",
           "event": [
@@ -1195,10 +3633,13 @@
                   "    pm.expect(body.message).to.eql('Booking created');",
                   "});",
                   "",
-                  "pm.test('Stores the booking with its embedded detail', function () {",
-                  "    var booking = pm.response.json().data;",
-                  "    pm.expect(booking.quantity).to.eql(2);",
-                  "    pm.expect(booking.service.category).to.eql('DogGrooming');",
+                  "pm.test('Stores what was sent', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data).to.have.property('_id');",
+                  "    pm.expect(data.quantity).to.eql(2);",
+                  "    pm.expect(data.client.name).to.eql('Tyreece S');",
+                  "    pm.expect(data.freelancer.name).to.eql('Ethan Edwards');",
+                  "    pm.expect(data.service.category).to.eql('DogGrooming');",
                   "});",
                   "",
                   "pm.collectionVariables.set('bookingId', pm.response.json().data._id);"
@@ -1225,7 +3666,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"date\": \"2026-09-01T09:00:00.000Z\",\n  \"quantity\": 2,\n  \"client\": {\n    \"name\": \"Jane Smith\"\n  },\n  \"freelancer\": {\n    \"name\": \"Bob Jones\",\n    \"services\": []\n  },\n  \"service\": {\n    \"category\": \"DogGrooming\",\n    \"rate\": 250,\n    \"rateType\": \"Hour\"\n  }\n}",
+              "raw": "{\n  \"date\": \"2026-09-10T09:00:00.000Z\",\n  \"quantity\": 2,\n  \"client\": {\n    \"name\": \"Tyreece S\"\n  },\n  \"freelancer\": {\n    \"name\": \"Ethan Edwards\",\n    \"services\": []\n  },\n  \"service\": {\n    \"category\": \"DogGrooming\",\n    \"rate\": 250,\n    \"rateType\": \"Hour\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1246,12 +3687,18 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Returns a counted list in the standard envelope', function () {",
+                  "pm.test('Answers with the standard envelope', function () {",
                   "    var body = pm.response.json();",
                   "    pm.expect(body.success).to.be.true;",
                   "    pm.expect(body.message).to.eql('Bookings retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns a counted list containing the new record', function () {",
+                  "    var body = pm.response.json();",
                   "    pm.expect(body.data).to.be.an('array');",
                   "    pm.expect(body.count).to.eql(body.data.length);",
+                  "    var ids = body.data.map(function (entry) { return entry._id; });",
+                  "    pm.expect(ids).to.include(pm.collectionVariables.get('bookingId'));",
                   "});"
                 ]
               }
@@ -1272,7 +3719,105 @@
           }
         },
         {
-          "name": "Reject a malformed id",
+          "name": "Get the booking by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Booking retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Returns the record that was just created', function () {",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('bookingId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update the booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Booking updated');",
+                  "});",
+                  "",
+                  "pm.test('Returns the changed record', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('bookingId'));",
+                  "    pm.expect(data.quantity).to.eql(3);",
+                  "    pm.expect(data.client.name).to.eql('Dylan Olsen');",
+                  "    pm.expect(data.service.category).to.eql('HouseCleaning');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-09-11T09:00:00.000Z\",\n  \"quantity\": 3,\n  \"client\": {\n    \"name\": \"Dylan Olsen\"\n  },\n  \"freelancer\": {\n    \"name\": \"Ndumsio J\",\n    \"services\": []\n  },\n  \"service\": {\n    \"category\": \"HouseCleaning\",\n    \"rate\": 180,\n    \"rateType\": \"Day\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject an invalid booking",
           "event": [
             {
               "listen": "test",
@@ -1283,8 +3828,195 @@
                   "    pm.response.to.have.status(400);",
                   "});",
                   "",
-                  "pm.test('Reports the bad value without exposing internals', function () {",
-                  "    pm.expect(pm.response.json().message).to.include('Invalid value');",
+                  "pm.test('Rejects the request with a validation error', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['date', 'quantity', 'client.name']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 0,\n  \"client\": {\n    \"name\": \"<script>alert(1)</script>\"\n  },\n  \"freelancer\": {\n    \"name\": \"Ethan Edwards\",\n    \"services\": []\n  },\n  \"service\": {\n    \"category\": \"DogGrooming\",\n    \"rate\": 250,\n    \"rateType\": \"Hour\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject unknown fields inside an embedded document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Drops what the rules do not declare, at every level', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data.client).to.not.have.property('isAdmin');",
+                  "    pm.expect(data.client._id).to.not.eql('000000000000000000000000');",
+                  "    pm.expect(data.client.name).to.eql('Tyreece S');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('strippedBookingId', pm.response.json().data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "The body is valid apart from two fields nobody declared. The request succeeds and the extras are dropped, rather than being written to the embedded client.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-09-12T09:00:00.000Z\",\n  \"quantity\": 1,\n  \"client\": {\n    \"name\": \"Tyreece S\",\n    \"_id\": \"000000000000000000000000\",\n    \"isAdmin\": true\n  },\n  \"freelancer\": {\n    \"name\": \"Ethan Edwards\",\n    \"services\": []\n  },\n  \"service\": {\n    \"category\": \"DogGrooming\",\n    \"rate\": 250,\n    \"rateType\": \"Hour\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete the second booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Booking deleted');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{strippedBookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{strippedBookingId}}"
+              ]
+            },
+            "description": "Teardown for the request above, so the suite leaves nothing behind."
+          }
+        },
+        {
+          "name": "Delete the booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Booking deleted');",
+                  "});",
+                  "",
+                  "pm.test('Carries no data with the confirmation', function () {",
+                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "The deleted booking is gone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Reports it as not found', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Booking not found');",
                   "});"
                 ]
               }
@@ -1294,13 +4026,229 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/clients/not-a-valid-id",
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "clients",
-                "not-a-valid-id"
+                "bookings",
+                "{{bookingId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. The suite leaves no records behind",
+      "description": "Every marketplace record the collection created was deleted by the folder that created it. These six checks prove it, so repeated runs do not fill the database. The five accounts remain, because the API has no endpoint that deletes a user: `npm run db:reset` is what clears those.",
+      "item": [
+        {
+          "name": "No services are left behind",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The services collection is empty again', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.count).to.eql(0);",
+                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            }
+          }
+        },
+        {
+          "name": "No clients are left behind",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The clients collection is empty again', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.count).to.eql(0);",
+                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "No freelancers are left behind",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The freelancers collection is empty again', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.count).to.eql(0);",
+                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/freelancers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "freelancers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "No invoices are left behind",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The invoices collection is empty again', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.count).to.eql(0);",
+                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices"
+              ]
+            }
+          }
+        },
+        {
+          "name": "No pops are left behind",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The pops collection is empty again', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.count).to.eql(0);",
+                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pops",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pops"
+              ]
+            }
+          }
+        },
+        {
+          "name": "No bookings are left behind",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The bookings collection is empty again', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.count).to.eql(0);",
+                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
               ]
             }
           }

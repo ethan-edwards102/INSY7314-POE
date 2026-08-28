@@ -1,8 +1,7 @@
 import { NAME_PATTERN, EMAIL_PATTERN, PASSWORD_PATTERN, USER_ROLES } from '../models/User.js';
 import { SERVICE_CATEGORIES, RATE_TYPES } from '../models/Service.js';
 
-// Clients, freelancers and users are all people here, so all three names are
-// held to the same rule and get the same wording when they break it.
+// Shared by users, clients and freelancers.
 const NAME_MESSAGE = 'Name must be 2-50 letters and may contain spaces, hyphens and apostrophes';
 
 // removing admin role so that users cannot self-promote
@@ -86,9 +85,8 @@ export const LOGIN_RULES = {
     },
 };
 
-// Numbers arrive from JSON already typed, so the typeof check does double duty:
-// it rejects "250" as much as it rejects { "$gt": 0 }, and an operator object
-// can never reach a query or a document.
+// The typeof check rejects "250" and { "$gt": 0 } alike, so neither reaches a
+// query or a document.
 export const checkNumber = (value, { field, label, min, max, integer = false, required = true }) => {
     if (value === undefined || value === null || value === '') {
         return required ? { field, message: `${label} is required` } : null;
@@ -113,8 +111,8 @@ export const checkNumber = (value, { field, label, min, max, integer = false, re
     return null;
 };
 
-// Dates are accepted as strings and parsed here, so an unparseable value is
-// answered with a 400 naming the field instead of becoming a CastError.
+// Dates arrive as strings and are parsed here, so an unreadable one is a 400
+// naming the field rather than a CastError.
 export const checkDate = (value, { field, label, required = true }) => {
     if (isMissing(value)) {
         return required ? { field, message: `${label} is required` } : null;
@@ -131,17 +129,15 @@ export const checkDate = (value, { field, label, required = true }) => {
     return null;
 };
 
-// Picks the checker a rule asks for. Rules without a type are strings, which
-// keeps the registration and login tables above unchanged.
+// Picks the checker a rule asks for. A rule without a type is a string.
 const CHECKERS = {
     string: checkString,
     number: checkNumber,
     date: checkDate,
 };
 
-// Runs a whole rule table and returns every problem it found. Nested objects
-// and arrays report with a path e.g. 'service.category' or 'services[0].rate',
-// so a caller can tell which of two identically named fields failed.
+// Runs a rule table and returns every problem it found. Nested objects and
+// arrays report with a path, such as 'service.category' or 'services[0].rate'.
 export const checkRules = (source, rules) => {
     const errors = [];
     const body = source ?? {};
@@ -192,9 +188,8 @@ const checkNested = (value, rule) => {
     return prefix(checkRules(value, rules), `${field}.`);
 };
 
-// Rebuilds the body from the rule table alone so a field nobody declared is
-// dropped rather than handed to Mongoose. This is what stops a request adding
-// its own _id or role to an embedded document, at every level of nesting.
+// Rebuilds the body from the rule table alone, at every level of nesting, so an
+// undeclared field is dropped rather than handed to Mongoose.
 export const pickValidated = (source, rules) => {
     const validated = {};
     const body = source ?? {};
@@ -202,7 +197,11 @@ export const pickValidated = (source, rules) => {
     for (const rule of Object.values(rules)) {
         const value = body[rule.field];
 
-        if (value === undefined) {
+        // The checkers above treat null as "not supplied", so it is dropped
+        // here for the same reason rather than forwarded to Mongoose, which
+        // would answer it with its own wording or, for a list, be handed a
+        // null to map over.
+        if (value === undefined || value === null) {
             continue;
         }
 
@@ -220,9 +219,14 @@ export const pickValidated = (source, rules) => {
     return validated;
 };
 
-// The rule tables for the six marketplace resources. Each one mirrors what its
-// schema requires, so the api answers a bad request with a field-by-field 400
-// instead of letting the database raise the objection.
+// The rule tables for the six marketplace resources. Each mirrors what its
+// schema requires.
+
+// Every role is allowed here, including Admin. What keeps that safe is
+// requireRole('Admin') on the route, not a restricted set of values.
+export const ROLE_RULES = {
+    role: { field: 'role', label: 'Role', allowed: USER_ROLES },
+};
 
 export const CLIENT_RULES = {
     name: { field: 'name', label: 'Name', pattern: NAME_PATTERN, message: NAME_MESSAGE },
@@ -236,8 +240,7 @@ export const SERVICE_RULES = {
 
 export const FREELANCER_RULES = {
     name: { field: 'name', label: 'Name', pattern: NAME_PATTERN, message: NAME_MESSAGE },
-    // A freelancer may be created before they list anything, so an absent list
-    // is allowed, a present one has every entry checked as a service.
+    // Optional, and every entry in a supplied list is checked as a service.
     services: { field: 'services', label: 'Services', type: 'array', of: SERVICE_RULES, required: false },
 };
 
@@ -253,8 +256,7 @@ export const INVOICE_RULES = {
 
 export const BOOKING_RULES = {
     date: { field: 'date', label: 'Date', type: 'date' },
-    // The schema defaults this to 1, so it is optional, a supplied value still
-    // has to be a whole number of at least one.
+    // The schema defaults this to 1, so it is optional.
     quantity: { field: 'quantity', label: 'Quantity', type: 'number', min: 1, integer: true, required: false },
     client: { field: 'client', label: 'Client', type: 'object', rules: CLIENT_RULES },
     freelancer: { field: 'freelancer', label: 'Freelancer', type: 'object', rules: FREELANCER_RULES },

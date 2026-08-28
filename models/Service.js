@@ -1,7 +1,6 @@
 import mongoose from 'mongoose'
 
-// Exported so request validation can reject an unknown value before the
-// document is built, rather than leaving it to the schema enum.
+// Exported for request validation.
 export const SERVICE_CATEGORIES = ['HouseCleaning', 'DogGrooming']
 export const RATE_TYPES = ['Once', 'Hour', 'Day']
 

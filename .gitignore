@@ -52,6 +52,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Operating system files
 .DS_Store
 Thumbs.db
+*.pdf
 
 # IDE files
 .idea/
