@@ -1,5 +1,6 @@
 import Freelancer from '../models/Freelancer.js';
 import { handleError, notFound } from '../utils/handleError.js';
+import { ok, created } from '../utils/respond.js';
 
 export const createFreelancer = async (req, res) => {
     try {
@@ -10,7 +11,7 @@ export const createFreelancer = async (req, res) => {
             services,
         });
 
-        return res.status(201).json(newFreelancer);
+        return created(res, 'Freelancer created', newFreelancer);
     } catch (error) {
         return handleError(res, error);
     }
@@ -19,11 +20,7 @@ export const createFreelancer = async (req, res) => {
 export const getFreelancers = async (req, res) => {
     try {
         const freelancers = await Freelancer.find({});
-        return res.status(200).json({
-            success: true,
-            count: freelancers.length,
-            data: freelancers,
-        });
+        return ok(res, 'Freelancers retrieved', freelancers, { count: freelancers.length });
     } catch (error) {
         return handleError(res, error);
     }
@@ -37,7 +34,7 @@ export const getFreelancerById = async (req, res) => {
             return notFound(res, 'Freelancer');
         }
 
-        return res.status(200).json(freelancer);
+        return ok(res, 'Freelancer retrieved', freelancer);
     } catch (error) {
         return handleError(res, error);
     }
@@ -57,7 +54,7 @@ export const updateFreelancer = async (req, res) => {
             return notFound(res, 'Freelancer');
         }
 
-        return res.status(200).json(freelancer);
+        return ok(res, 'Freelancer updated', freelancer);
     } catch (error) {
         return handleError(res, error);
     }
@@ -71,10 +68,7 @@ export const deleteFreelancer = async (req, res) => {
             return notFound(res, 'Freelancer');
         }
 
-        return res.status(200).json({
-            success: true,
-            message: 'Freelancer deleted',
-        });
+        return ok(res, 'Freelancer deleted');
     } catch (error) {
         return handleError(res, error);
     }

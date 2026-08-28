@@ -1,5 +1,6 @@
 import Client from '../models/Client.js';
 import { handleError, notFound } from '../utils/handleError.js';
+import { ok, created } from '../utils/respond.js';
 
 export const createClient = async (req, res) => {
     try {
@@ -9,7 +10,7 @@ export const createClient = async (req, res) => {
             name,
         });
 
-        return res.status(201).json(newClient);
+        return created(res, 'Client created', newClient);
     } catch (error) {
         return handleError(res, error);
     }
@@ -18,11 +19,7 @@ export const createClient = async (req, res) => {
 export const getClients = async (req, res) => {
     try {
         const clients = await Client.find({});
-        return res.status(200).json({
-            success: true,
-            count: clients.length,
-            data: clients,
-        });
+        return ok(res, 'Clients retrieved', clients, { count: clients.length });
     } catch (error) {
         return handleError(res, error);
     }
@@ -36,7 +33,7 @@ export const getClientById = async (req, res) => {
             return notFound(res, 'Client');
         }
 
-        return res.status(200).json(client);
+        return ok(res, 'Client retrieved', client);
     } catch (error) {
         return handleError(res, error);
     }
@@ -56,7 +53,7 @@ export const updateClient = async (req, res) => {
             return notFound(res, 'Client');
         }
 
-        return res.status(200).json(client);
+        return ok(res, 'Client updated', client);
     } catch (error) {
         return handleError(res, error);
     }
@@ -70,10 +67,7 @@ export const deleteClient = async (req, res) => {
             return notFound(res, 'Client');
         }
 
-        return res.status(200).json({
-            success: true,
-            message: 'Client deleted',
-        });
+        return ok(res, 'Client deleted');
     } catch (error) {
         return handleError(res, error);
     }

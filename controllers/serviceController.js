@@ -1,5 +1,6 @@
 import Service from '../models/Service.js';
 import { handleError, notFound } from '../utils/handleError.js';
+import { ok, created } from '../utils/respond.js';
 
 export const createService = async (req, res) => {
     try {
@@ -11,7 +12,7 @@ export const createService = async (req, res) => {
             rateType,
         });
 
-        return res.status(201).json(newService);
+        return created(res, 'Service created', newService);
     } catch (error) {
         return handleError(res, error);
     }
@@ -20,11 +21,7 @@ export const createService = async (req, res) => {
 export const getServices = async (req, res) => {
     try {
         const services = await Service.find({});
-        return res.status(200).json({
-            success: true,
-            count: services.length,
-            data: services,
-        });
+        return ok(res, 'Services retrieved', services, { count: services.length });
     } catch (error) {
         return handleError(res, error);
     }
@@ -38,7 +35,7 @@ export const getServiceById = async (req, res) => {
             return notFound(res, 'Service');
         }
 
-        return res.status(200).json(service);
+        return ok(res, 'Service retrieved', service);
     } catch (error) {
         return handleError(res, error);
     }
@@ -58,7 +55,7 @@ export const updateService = async (req, res) => {
             return notFound(res, 'Service');
         }
 
-        return res.status(200).json(service);
+        return ok(res, 'Service updated', service);
     } catch (error) {
         return handleError(res, error);
     }
@@ -72,10 +69,7 @@ export const deleteService = async (req, res) => {
             return notFound(res, 'Service');
         }
 
-        return res.status(200).json({
-            success: true,
-            message: 'Service deleted',
-        });
+        return ok(res, 'Service deleted');
     } catch (error) {
         return handleError(res, error);
     }

@@ -1,3 +1,4 @@
+import { fail } from '../utils/respond.js';
 import { checkString, LOGIN_RULES } from '../utils/validators.js';
 
 // Rejects a malformed login request before it reaches the controller
@@ -9,11 +10,7 @@ export const validateLogin = (req, res, next) => {
     );
 
     if (errors.length > 0) {
-        return res.status(400).json({
-            success: false,
-            message: 'Validation failed',
-            errors,
-        });
+        return fail(res, 400, 'Validation failed', errors);
     }
 
     req.validated = {

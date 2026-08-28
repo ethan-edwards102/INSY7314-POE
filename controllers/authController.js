@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import { handleError } from '../utils/handleError.js';
+import { ok, created, fail } from '../utils/respond.js';
 import { signToken } from '../utils/token.js';
 
 // req already passed validateRegistration, so req.validated holds checked values and is used in
@@ -22,12 +23,7 @@ export const register = async (req, res) => {
 
         // The model's toJSON transform removes the password hash, so the
         // created document is safe to return as-is.
-        return res.status(201).json({
-            success: true,
-            message: 'Registration successful',
-            data: user,
-            token,
-        });
+        return created(res, 'Registration successful', user, { token });
     } catch (error) {
         return handleError(res, error);
     }
@@ -47,22 +43,14 @@ export const login = async (req, res) => {
         // wrong, so the response can't be used to enumerate which emails
         // have accounts.
         if (!user || !(await user.comparePassword(password))) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password',
-            });
+            return fail(res, 401, 'Invalid email or password');
         }
 
         const token = signToken(user);
 
         // The model's toJSON transform removes the password hash, so the
         // fetched document is safe to return as-is.
-        return res.status(200).json({
-            success: true,
-            message: 'Login successful',
-            data: user,
-            token,
-        });
+        return ok(res, 'Login successful', user, { token });
     } catch (error) {
         return handleError(res, error);
     }

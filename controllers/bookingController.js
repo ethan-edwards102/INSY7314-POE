@@ -1,5 +1,6 @@
 import Booking from '../models/Booking.js';
 import { handleError, notFound } from '../utils/handleError.js';
+import { ok, created } from '../utils/respond.js';
 
 export const createBooking = async (req, res) => {
     try {
@@ -13,7 +14,7 @@ export const createBooking = async (req, res) => {
             service,
         });
 
-        return res.status(201).json(newBooking);
+        return created(res, 'Booking created', newBooking);
     } catch (error) {
         return handleError(res, error);
     }
@@ -22,11 +23,7 @@ export const createBooking = async (req, res) => {
 export const getBookings = async (req, res) => {
     try {
         const bookings = await Booking.find({});
-        return res.status(200).json({
-            success: true,
-            count: bookings.length,
-            data: bookings,
-        });
+        return ok(res, 'Bookings retrieved', bookings, { count: bookings.length });
     } catch (error) {
         return handleError(res, error);
     }
@@ -40,7 +37,7 @@ export const getBookingById = async (req, res) => {
             return notFound(res, 'Booking');
         }
 
-        return res.status(200).json(booking);
+        return ok(res, 'Booking retrieved', booking);
     } catch (error) {
         return handleError(res, error);
     }
@@ -60,7 +57,7 @@ export const updateBooking = async (req, res) => {
             return notFound(res, 'Booking');
         }
 
-        return res.status(200).json(booking);
+        return ok(res, 'Booking updated', booking);
     } catch (error) {
         return handleError(res, error);
     }
@@ -74,10 +71,7 @@ export const deleteBooking = async (req, res) => {
             return notFound(res, 'Booking');
         }
 
-        return res.status(200).json({
-            success: true,
-            message: 'Booking deleted',
-        });
+        return ok(res, 'Booking deleted');
     } catch (error) {
         return handleError(res, error);
     }

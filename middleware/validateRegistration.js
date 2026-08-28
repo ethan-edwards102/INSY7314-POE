@@ -1,3 +1,4 @@
+import { fail } from '../utils/respond.js';
 import { checkString, REGISTRATION_RULES } from '../utils/validators.js';
 
 // Rejects a malformed registration request before it reaches the controller
@@ -14,11 +15,7 @@ export const validateRegistration = (req, res, next) => {
     ].filter(Boolean);
 
     if (errors.length > 0) {
-        return res.status(400).json({
-            success: false,
-            message: 'Validation failed',
-            errors,
-        });
+        return fail(res, 400, 'Validation failed', errors);
     }
 
     // Only these four values are passed on. Reading from req.validated rather

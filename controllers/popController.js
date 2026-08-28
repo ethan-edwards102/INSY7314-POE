@@ -1,5 +1,6 @@
 import Pop from '../models/Pop.js';
 import { handleError, notFound } from '../utils/handleError.js';
+import { ok, created } from '../utils/respond.js';
 
 export const createPop = async (req, res) => {
     try {
@@ -9,7 +10,7 @@ export const createPop = async (req, res) => {
             datePaid,
         });
 
-        return res.status(201).json(newPop);
+        return created(res, 'Pop created', newPop);
     } catch (error) {
         return handleError(res, error);
     }
@@ -18,11 +19,7 @@ export const createPop = async (req, res) => {
 export const getPops = async (req, res) => {
     try {
         const pops = await Pop.find({});
-        return res.status(200).json({
-            success: true,
-            count: pops.length,
-            data: pops,
-        });
+        return ok(res, 'Pops retrieved', pops, { count: pops.length });
     } catch (error) {
         return handleError(res, error);
     }
@@ -36,7 +33,7 @@ export const getPopById = async (req, res) => {
             return notFound(res, 'Pop');
         }
 
-        return res.status(200).json(pop);
+        return ok(res, 'Pop retrieved', pop);
     } catch (error) {
         return handleError(res, error);
     }
@@ -56,7 +53,7 @@ export const updatePop = async (req, res) => {
             return notFound(res, 'Pop');
         }
 
-        return res.status(200).json(pop);
+        return ok(res, 'Pop updated', pop);
     } catch (error) {
         return handleError(res, error);
     }
@@ -70,10 +67,7 @@ export const deletePop = async (req, res) => {
             return notFound(res, 'Pop');
         }
 
-        return res.status(200).json({
-            success: true,
-            message: 'Pop deleted',
-        });
+        return ok(res, 'Pop deleted');
     } catch (error) {
         return handleError(res, error);
     }

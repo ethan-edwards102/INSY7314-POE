@@ -1,3 +1,4 @@
+import { fail } from '../utils/respond.js';
 import { verifyToken } from '../utils/token.js';
 
 // Populates req.user from the Authorization header, so any route behind this
@@ -8,10 +9,7 @@ export const authenticate = (req, res, next) => {
     const [scheme, token] = header.split(' ');
 
     if (scheme !== 'Bearer' || !token) {
-        return res.status(401).json({
-            success: false,
-            message: 'Authentication required',
-        });
+        return fail(res, 401, 'Authentication required');
     }
 
     try {
@@ -24,9 +22,6 @@ export const authenticate = (req, res, next) => {
         // deserves its own message rather than a generic 500.
         const message = error.name === 'TokenExpiredError' ? 'Token has expired' : 'Invalid token';
 
-        return res.status(401).json({
-            success: false,
-            message,
-        });
+        return fail(res, 401, message);
     }
 };

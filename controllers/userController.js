@@ -1,5 +1,6 @@
 import User, { USER_ROLES } from '../models/User.js';
 import { handleError, notFound } from '../utils/handleError.js';
+import { ok, fail } from '../utils/respond.js';
 import { checkString } from '../utils/validators.js';
 
 // Every role, including Admin, is a valid target here: unlike registration,
@@ -17,11 +18,7 @@ export const updateUserRole = async (req, res) => {
         });
 
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation failed',
-                errors: [error],
-            });
+            return fail(res, 400, 'Validation failed', [error]);
         }
 
         const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true, runValidators: true });
@@ -30,11 +27,7 @@ export const updateUserRole = async (req, res) => {
             return notFound(res, 'User');
         }
 
-        return res.status(200).json({
-            success: true,
-            message: 'Role updated',
-            data: user,
-        });
+        return ok(res, 'Role updated', user);
     } catch (error) {
         return handleError(res, error);
     }

@@ -1,5 +1,6 @@
 import Invoice from '../models/Invoice.js';
 import { handleError, notFound } from '../utils/handleError.js';
+import { ok, created } from '../utils/respond.js';
 
 export const createInvoice = async (req, res) => {
     try {
@@ -11,7 +12,7 @@ export const createInvoice = async (req, res) => {
             pop,
         });
 
-        return res.status(201).json(newInvoice);
+        return created(res, 'Invoice created', newInvoice);
     } catch (error) {
         return handleError(res, error);
     }
@@ -20,11 +21,7 @@ export const createInvoice = async (req, res) => {
 export const getInvoices = async (req, res) => {
     try {
         const invoices = await Invoice.find({});
-        return res.status(200).json({
-            success: true,
-            count: invoices.length,
-            data: invoices,
-        });
+        return ok(res, 'Invoices retrieved', invoices, { count: invoices.length });
     } catch (error) {
         return handleError(res, error);
     }
@@ -38,7 +35,7 @@ export const getInvoiceById = async (req, res) => {
             return notFound(res, 'Invoice');
         }
 
-        return res.status(200).json(invoice);
+        return ok(res, 'Invoice retrieved', invoice);
     } catch (error) {
         return handleError(res, error);
     }
@@ -58,7 +55,7 @@ export const updateInvoice = async (req, res) => {
             return notFound(res, 'Invoice');
         }
 
-        return res.status(200).json(invoice);
+        return ok(res, 'Invoice updated', invoice);
     } catch (error) {
         return handleError(res, error);
     }
@@ -72,10 +69,7 @@ export const deleteInvoice = async (req, res) => {
             return notFound(res, 'Invoice');
         }
 
-        return res.status(200).json({
-            success: true,
-            message: 'Invoice deleted',
-        });
+        return ok(res, 'Invoice deleted');
     } catch (error) {
         return handleError(res, error);
     }

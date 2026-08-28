@@ -861,34 +861,24 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Login is implemented separately. Until the route exists these assertions",
-                  "// are skipped rather than failed, so the collection stays green and turns",
-                  "// into real tests the moment the endpoint lands.",
-                  "var pending = pm.response.code === 404;",
-                  "var check = pending ? pm.test.skip : pm.test;",
-                  "",
-                  "if (pending) {",
-                  "    console.log('POST /auth/login is not implemented yet - assertions skipped.');",
-                  "}",
-                  "",
-                  "check('Status code is 200', function () {",
+                  "pm.test('Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "check('Returns a JWT', function () {",
+                  "pm.test('Returns a JWT', function () {",
                   "    var token = pm.response.json().token;",
                   "    pm.expect(token).to.be.a('string');",
                   "    pm.expect(token.split('.')).to.have.lengthOf(3);",
                   "    pm.collectionVariables.set('authToken', token);",
                   "});",
                   "",
-                  "check('Token payload carries the id and role', function () {",
+                  "pm.test('Token payload carries the id and role', function () {",
                   "    var payload = JSON.parse(atob(pm.response.json().token.split('.')[1]));",
                   "    pm.expect(payload).to.have.property('id');",
                   "    pm.expect(payload).to.have.property('role');",
                   "});",
                   "",
-                  "check('Token payload carries no password hash', function () {",
+                  "pm.test('Token payload carries no password hash', function () {",
                   "    pm.expect(pm.response.text()).to.not.include('$2b$');",
                   "});"
                 ]
@@ -932,21 +922,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Login is implemented separately. Until the route exists these assertions",
-                  "// are skipped rather than failed, so the collection stays green and turns",
-                  "// into real tests the moment the endpoint lands.",
-                  "var pending = pm.response.code === 404;",
-                  "var check = pending ? pm.test.skip : pm.test;",
-                  "",
-                  "if (pending) {",
-                  "    console.log('POST /auth/login is not implemented yet - assertions skipped.');",
-                  "}",
-                  "",
-                  "check('Status code is 401', function () {",
+                  "pm.test('Status code is 401', function () {",
                   "    pm.response.to.have.status(401);",
                   "});",
                   "",
-                  "check('Returns the same generic message for either wrong credential', function () {",
+                  "pm.test('Returns the same generic message for either wrong credential', function () {",
                   "        pm.expect(pm.response.json().message).to.eql('Invalid email or password');",
                   "});"
                 ]
@@ -990,17 +970,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Login is implemented separately. Until the route exists these assertions",
-                  "// are skipped rather than failed, so the collection stays green and turns",
-                  "// into real tests the moment the endpoint lands.",
-                  "var pending = pm.response.code === 404;",
-                  "var check = pending ? pm.test.skip : pm.test;",
-                  "",
-                  "if (pending) {",
-                  "    console.log('POST /auth/login is not implemented yet - assertions skipped.');",
-                  "}",
-                  "",
-                  "check('Status code is 401', function () {",
+                  "pm.test('Status code is 401', function () {",
                   "    pm.response.to.have.status(401);",
                   "});"
                 ]
@@ -1057,7 +1027,14 @@
                   "    pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "pm.collectionVariables.set('serviceId', pm.response.json()._id);"
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Service created');",
+                  "    pm.expect(body.data).to.be.an('object');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('serviceId', pm.response.json().data._id);"
                 ]
               }
             }
@@ -1156,7 +1133,14 @@
                   "    pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "pm.collectionVariables.set('clientId', pm.response.json()._id);"
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Client created');",
+                  "    pm.expect(body.data).to.be.an('object');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('clientId', pm.response.json().data._id);"
                 ]
               }
             }
@@ -1201,11 +1185,19 @@
                   "    pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "pm.test('Stores the booking with its embedded detail', function () {",
+                  "pm.test('Answers with the standard envelope', function () {",
                   "    var body = pm.response.json();",
-                  "    pm.expect(body.quantity).to.eql(2);",
-                  "    pm.expect(body.service.category).to.eql('DogGrooming');",
-                  "});"
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Booking created');",
+                  "});",
+                  "",
+                  "pm.test('Stores the booking with its embedded detail', function () {",
+                  "    var booking = pm.response.json().data;",
+                  "    pm.expect(booking.quantity).to.eql(2);",
+                  "    pm.expect(booking.service.category).to.eql('DogGrooming');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('bookingId', pm.response.json().data._id);"
                 ]
               }
             }
@@ -1250,9 +1242,10 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Returns a counted list', function () {",
+                  "pm.test('Returns a counted list in the standard envelope', function () {",
                   "    var body = pm.response.json();",
                   "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Bookings retrieved');",
                   "    pm.expect(body.data).to.be.an('array');",
                   "    pm.expect(body.count).to.eql(body.data.length);",
                   "});"

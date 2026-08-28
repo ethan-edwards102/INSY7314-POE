@@ -1,11 +1,9 @@
 import { logServerError } from '../utils/handleError.js';
+import { fail } from '../utils/respond.js';
 
 // Reached when no route matched the request.
 export const notFoundHandler = (req, res) => {
-    return res.status(404).json({
-        success: false,
-        message: 'Route not found',
-    });
+    return fail(res, 404, 'Route not found');
 };
 
 // The last middleware in the stack. Express routes any error raised before a
@@ -23,23 +21,14 @@ export const errorHandler = (error, req, res, next) => {
     }
 
     if (error.type === 'entity.parse.failed') {
-        return res.status(400).json({
-            success: false,
-            message: 'Request body is not valid JSON',
-        });
+        return fail(res, 400, 'Request body is not valid JSON');
     }
 
     if (error.type === 'entity.too.large') {
-        return res.status(413).json({
-            success: false,
-            message: 'Request body is too large',
-        });
+        return fail(res, 413, 'Request body is too large');
     }
 
     logServerError(error);
 
-    return res.status(500).json({
-        success: false,
-        message: 'An unexpected error occurred',
-    });
+    return fail(res, 500, 'An unexpected error occurred');
 };
