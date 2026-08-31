@@ -1303,8 +1303,6 @@ producing a token:
 
 ### 10.2 Screenshots
 
-> **[`docs/screenshots/`]**
-
 | # | Screenshot | Demonstrates |
 |---|---|---|
 | 1 | `POST /auth/register` returning `201` with a token | Registration works and issues a JWT |
@@ -1317,6 +1315,36 @@ producing a token:
 | 8 | Compass showing `$2b$12$` hashes in `users` | No plaintext password is stored |
 | 9 | The certificate warning or padlock on `https://localhost:5001` | The API is served over TLS |
 | 10 | The Newman summary showing 401 of 401 passing | The full suite passes |
+
+**1. Registration works and issues a JWT**
+![POST /auth/register returning 201 with a token](docs/1.png)
+
+**2. Login works and issues a JWT**
+![POST /auth/login returning 200 with a token](docs/2.png)
+
+**3. Uniqueness enforced by the database**
+![Duplicate registration returning 409](docs/3.png)
+
+**4. Identical message, no account enumeration**
+![Wrong password returning 401](docs/4.png)
+
+**5. Every bad field reported at once**
+![Validation failure returning 400 with the errors array](docs/5.png)
+
+**6. The JWT is required, not optional**
+![A protected route with no token returning 401](docs/6.png)
+
+**7. Signature verification cannot be bypassed**
+![A forged Admin token returning 401](docs/7.png)
+
+**8. No plaintext password is stored**
+![Compass showing bcrypt hashes in users](docs/8.png)
+
+**9. The API is served over TLS**
+![The certificate warning on https://localhost:5001](docs/9.png)
+
+**10. The full suite passes**
+![The Newman summary showing 401 of 401 passing](docs/10.png)
 
 ---
 
