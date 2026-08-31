@@ -1,12 +1,12 @@
-/* 
-Builds every response the api sends in one shape:
--> success, message and data are read the same way on every route.
--> The status code sits with the body that explains it.
+/*
+Build every API response in one shape:
+-> success, message and data have the same meaning on every route.
+-> The status code sits together with the body that explains it.
 */
 
-// "data" is whatever the route produced. "extra" carries the fields only some
-// routes have, such as "count" on a list or "token" on a login. An undefined
-// "data" is dropped by JSON.stringify.
+// "data" is the output of the route. "extra" carries fields that only some
+// routes have, such as "count" on a list or "token" on a login.
+// JSON.stringify drops an undefined "data" field from the response.
 const success = (res, status, message, data, extra = {}) => {
     return res.status(status).json({
         success: true,
@@ -16,18 +16,18 @@ const success = (res, status, message, data, extra = {}) => {
     });
 };
 
-// 201, for something that now exists at a new id.
+// Use status 201 when a new item now exists at a new id.
 export const created = (res, message, data, extra) => {
     return success(res, 201, message, data, extra);
 };
 
-// 200, for everything else that worked.
+// Use status 200 for every other successful response.
 export const ok = (res, message, data, extra) => {
     return success(res, 200, message, data, extra);
 };
 
-// Failures never carry "data". "errors" is the per-field list from validation
-// and is left off when there is no field to blame.
+// A failure response never carries "data". "errors" is the per-field list
+// from validation. Leave "errors" off when there is no field at fault.
 export const fail = (res, status, message, errors) => {
     return res.status(status).json({
         success: false,

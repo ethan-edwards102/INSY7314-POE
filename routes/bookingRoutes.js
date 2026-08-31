@@ -11,7 +11,7 @@ router.use(authenticate);
 router.post('/', validateBody(BOOKING_RULES), bookingController.createBooking);
 router.get('/', bookingController.getBookings);
 router.get('/:id', bookingController.getBookingById);
-// PUT replaces the whole document, so it uses the same rules as a create.
+// PUT replaces the whole document. It uses the same rules as create.
 router.put('/:id', validateBody(BOOKING_RULES), bookingController.updateBooking);
 router.delete('/:id', bookingController.deleteBooking);
 

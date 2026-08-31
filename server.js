@@ -1,4 +1,4 @@
-// Validates configuration and loads the certificate before anything else
+// Check the configuration and load the certificate before other code runs.
 import { config } from './config/env.js';
 
 import https from 'node:https';
@@ -9,9 +9,9 @@ import User from './models/User.js';
 await mongoose.connect(config.mongoUri);
 console.log('Connected to MongoDB');
 
-// Waits for the unique index on User.email to exist before the server accepts
-// traffic, so the first duplicate registration is rejected by the database
-// rather than slipping through while the index is still being built.
+// Wait for the unique index on User.email to build before the server accepts
+// traffic. This way, the database rejects the first duplicate registration.
+// Without this wait, that registration could pass while the index still builds.
 await User.init();
 
 https.createServer(config.ssl, app).listen(config.port, () => {

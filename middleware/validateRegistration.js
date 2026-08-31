@@ -1,10 +1,11 @@
 import { fail } from '../utils/respond.js';
 import { checkString, REGISTRATION_RULES } from '../utils/validators.js';
 
-// Rejects a malformed registration request before it reaches the controller
+// Reject a malformed registration request before it reaches the controller.
 export const validateRegistration = (req, res, next) => {
-    // req.body is undefined when no body was sent, or when the request did not
-    // carry a JSON content type, so it therefore cant be destructured directly
+    // req.body is undefined when the request has no body, or when the
+    // request has no JSON content type. Because of this, do not
+    // destructure req.body directly.
     const { name, email, password, role } = req.body ?? {};
 
     const errors = [
@@ -18,9 +19,10 @@ export const validateRegistration = (req, res, next) => {
         return fail(res, 400, 'Validation failed', errors);
     }
 
-    // Only these four values are passed on. Reading from req.validated rather
-    // than req.body means any extra field an attacker adds to the request is
-    // discarded instead of being written to the database.
+    // Pass on only these four values. The controller reads from
+    // req.validated, not req.body. This way, the server discards any extra
+    // field that an attacker adds to the request. It does not write the
+    // extra field to the database.
     req.validated = {
         name: name.trim(),
         email: email.trim().toLowerCase(),

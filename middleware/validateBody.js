@@ -1,19 +1,19 @@
 import { fail } from '../utils/respond.js';
 import { checkRules, pickValidated } from '../utils/validators.js';
 
-/* 
-Rejects a malformed request body before it reaches a controller:
--> Reports every bad field at once.
--> Rebuilds req.validated from the rule table, so an undeclared field
-never reaches the database.
+/*
+Reject a malformed request body before it reaches a controller:
+-> Report every bad field in one response.
+-> Rebuild req.validated from the rule table. This way, an undeclared
+field never reaches the database.
 */
 
-// Returns a middleware, so a route can name its rule table:
+// Return a middleware. This lets a route name its rule table, for example
 // validateBody(SERVICE_RULES).
 export const validateBody = (rules) => {
     return (req, res, next) => {
-        // req.body is undefined when no body was sent, or when the request did
-        // not carry a JSON content type.
+        // req.body is undefined when the request has no body, or when the
+        // request has no JSON content type.
         const errors = checkRules(req.body, rules);
 
         if (errors.length > 0) {

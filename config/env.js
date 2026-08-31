@@ -2,14 +2,14 @@ import 'dotenv/config';
 
 import fs from 'node:fs';
 
-/* 
-Validates env config at startup before anything else runs:
--> Prevents a missing value failing late and unhelpfully.
--> Converts a confusing runtime error into a simple startup
-message that names the missing keys. 
+/*
+Check the environment configuration at startup, before other code runs:
+-> This finds a missing value early.
+-> This gives a clear startup message instead of a confusing runtime error.
+The message names the missing keys.
 */
 
-// Every value the api cannot run without with the reason it exists.
+// This list has each required value and the reason for it.
 const REQUIRED = [
     ['PORT', 'the port the HTTPS server listens on, e.g. 5001'],
     ['MONGO_URI', 'the MongoDB connection string, e.g. mongodb://127.0.0.1:27017/hustle_hub_plus'],
@@ -21,7 +21,7 @@ const REQUIRED = [
 
 const missing = REQUIRED.filter(([key]) => !process.env[key]?.trim());
 
-// Reports every missing key at once
+// Show all missing keys in one message.
 if (missing.length > 0) {
     console.error(`Missing required configuration in .env (${missing.length} value(s)):\n`);
     for (const [key, description] of missing) {
@@ -31,7 +31,7 @@ if (missing.length > 0) {
     process.exit(1);
 }
 
-// Verify that JWT_SECRET is not the placeholder value from .env.example.
+// Check that JWT_SECRET is not the example placeholder value.
 if (process.env.JWT_SECRET === 'GENERATE_ME') {
     console.error('JWT_SECRET is still set to the .env.example placeholder.');
     console.error('Replace it with a long random value, for example the output of:');
@@ -39,7 +39,7 @@ if (process.env.JWT_SECRET === 'GENERATE_ME') {
     process.exit(1);
 }
 
-// Verify the SSL certificate files exist
+// Check that the SSL certificate files exist.
 
 const certificate = {
     keyPath: process.env.SSL_KEY_PATH,
@@ -48,7 +48,7 @@ const certificate = {
 
 const absent = Object.values(certificate).filter((path) => !fs.existsSync(path));
 
-// Reports every missing certificate file at once
+// Show all missing certificate files in one message.
 if (absent.length > 0) {
     console.error('TLS certificate not found. Expected:\n');
     console.error(`  ${certificate.keyPath}`);
@@ -58,7 +58,7 @@ if (absent.length > 0) {
     process.exit(1);
 }
 
-// Export the config object for use in the rest of the application
+// Export the config object. Other modules in the application use it.
 export const config = {
     port: process.env.PORT,
     mongoUri: process.env.MONGO_URI,

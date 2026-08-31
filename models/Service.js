@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 
-// Exported for request validation.
+// Export these values. Request validation uses them.
 export const SERVICE_CATEGORIES = ['HouseCleaning', 'DogGrooming']
 export const RATE_TYPES = ['Once', 'Hour', 'Day']
 

@@ -3,25 +3,26 @@ import { handleError } from '../utils/handleError.js';
 import { ok, created, fail } from '../utils/respond.js';
 import { signToken } from '../utils/token.js';
 
-// req already passed validateRegistration, so req.validated holds checked values and is used in
-// place of req.body.
+// req has already passed validateRegistration. req.validated holds checked
+// values. Use req.validated in place of req.body.
 export const register = async (req, res) => {
     try {
         const { name, email, password, role } = req.validated;
 
-        // The password is hashed by the model's pre-save hook, so the plain
-        // text value ends here and is never written to the database.
+        // The model's pre-save hook hashes the password. The plain text
+        // value stops here. The database never stores the plain text value.
         //
-        // No "does this email already exist" query is run first. Two requests
-        // could both pass such a check before either had written, so
-        // uniqueness is left to the unique index on the collection, which the
-        // database enforces atomically. The resulting duplicate key error is
-        // translated into a 409 by handleError.
+        // This code does not run a query first to check if the email
+        // already exists. Two requests could both pass such a check before
+        // either request wrote its document. Instead, the unique index on
+        // the collection enforces uniqueness. The database enforces this
+        // index atomically. handleError turns the resulting duplicate key
+        // error into a 409 response.
         const user = await User.create({ name, email, password, role });
 
         const token = signToken(user);
 
-        // The model's toJSON transform removes the password hash, so the
+        // The model's toJSON transform removes the password hash. The
         // created document is safe to return as-is.
         return created(res, 'Registration successful', user, { token });
     } catch (error) {
@@ -29,26 +30,27 @@ export const register = async (req, res) => {
     }
 };
 
-// req already passed validateLogin, so req.validated holds a trimmed,
+// req has already passed validateLogin. req.validated holds a trimmed,
 // lowercase email and the untouched password.
 export const login = async (req, res) => {
     try {
         const { email, password } = req.validated;
 
-        // password is select: false on the schema, so it has to be asked for
-        // explicitly here to be available for comparePassword below.
+        // The schema sets password to select: false. This code must ask
+        // for the password explicitly, so it is available for
+        // comparePassword below.
         const user = await User.findOne({ email }).select('+password');
 
-        // Same message whether the email isn't registered or the password is
-        // wrong, so the response can't be used to enumerate which emails
-        // have accounts.
+        // Use the same message whether the email is not registered or the
+        // password is wrong. This stops an attacker from using the
+        // response to find out which emails have accounts.
         if (!user || !(await user.comparePassword(password))) {
             return fail(res, 401, 'Invalid email or password');
         }
 
         const token = signToken(user);
 
-        // The model's toJSON transform removes the password hash, so the
+        // The model's toJSON transform removes the password hash. The
         // fetched document is safe to return as-is.
         return ok(res, 'Login successful', user, { token });
     } catch (error) {

@@ -1,7 +1,7 @@
 import { fail } from '../utils/respond.js';
 import { checkString, LOGIN_RULES } from '../utils/validators.js';
 
-// Rejects a malformed login request before it reaches the controller
+// Reject a malformed login request before it reaches the controller.
 export const validateLogin = (req, res, next) => {
     const { email, password } = req.body ?? {};
 

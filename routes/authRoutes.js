@@ -5,8 +5,8 @@ import { validateLogin } from '../middleware/validateLogin.js';
 
 const router = express.Router();
 
-// Validation runs as middleware ahead of the controller, so an invalid request
-// is answered before any database work is attempted.
+// This middleware validates the request before the controller runs. This
+// way, the server answers an invalid request before it does any database work.
 router.post('/register', validateRegistration, authController.register);
 router.post('/login', validateLogin, authController.login);
 

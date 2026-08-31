@@ -1,21 +1,23 @@
 import { logServerError } from '../utils/handleError.js';
 import { fail } from '../utils/respond.js';
 
-// Reached when no route matched the request.
+// This handler runs when no route matches the request.
 export const notFoundHandler = (req, res) => {
     return fail(res, 404, 'Route not found');
 };
 
-// The last middleware in the stack. Express routes any error raised before a
-// response was sent here, including failures thrown by the JSON body parser
-// before our own code runs. Without it Express falls back to its default
-// handler, which returns the stack trace as an HTML page.
+// This is the last middleware in the stack. Express sends every error
+// raised before a response was sent to this handler. This includes a
+// failure thrown by the JSON body parser, before our own code runs.
+// Without this handler, Express uses its default handler instead, which
+// returns the stack trace as an HTML page.
 //
-// Express identifies an error handler by its four parameters, so `next` must
-// stay in the signature even though it is only used for the headers-sent case.
+// Express identifies an error handler by its four parameters. Because of
+// this, `next` must stay in the signature, even though this code uses
+// `next` only for the headers-sent case.
 export const errorHandler = (error, req, res, next) => {
-    // The response has already started, so the only correct action is to hand
-    // back to Express and let it abort the connection.
+    // The response has already started. The only correct action is to
+    // hand the error back to Express and let Express abort the connection.
     if (res.headersSent) {
         return next(error);
     }

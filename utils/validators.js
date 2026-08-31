@@ -1,24 +1,24 @@
 import { NAME_PATTERN, EMAIL_PATTERN, PASSWORD_PATTERN, USER_ROLES } from '../models/User.js';
 import { SERVICE_CATEGORIES, RATE_TYPES } from '../models/Service.js';
 
-// Shared by users, clients and freelancers.
+// Users, clients and freelancers share this message.
 const NAME_MESSAGE = 'Name must be 2-50 letters and may contain spaces, hyphens and apostrophes';
 
-// removing admin role so that users cannot self-promote
+// Remove the Admin role. This stops a user from giving themselves the Admin role.
 export const SELF_SERVICE_ROLES = USER_ROLES.filter((role) => role !== 'Admin');
 
-// Treats undefined, null and whitespace-only strings as "not supplied".
+// Treat undefined, null, and a string of only spaces as "not supplied".
 const isMissing = (value) =>
     value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
 
-// Validates one field and returns either an error object or null. Returning
-// rather than throwing lets the caller gather every problem in a request
-// instead of reporting only the first one.
+// Check one field. Return an error object, or return null if the field is
+// valid. This function returns the error instead of throwing it. This lets
+// the caller collect every problem in a request, not only the first one.
 //
-// The typeof check is the guard against NoSQL operator injection: a JSON body
-// such as { "email": { "$ne": null } } arrives as an object, and handing that
-// to a Mongoose query would let an attacker match a document without knowing
-// the real value. Anything that is not a plain string is refused outright.
+// The typeof check guards against NoSQL operator injection. A JSON body such
+// as { "email": { "$ne": null } } arrives as an object. If this object went
+// into a Mongoose query, an attacker could match a document without knowing
+// the real value. This function rejects any value that is not a plain string.
 export const checkString = (value, { field, label, pattern, message, allowed, trim = true, required = true }) => {
     if (isMissing(value)) {
         return required ? { field, message: `${label} is required` } : null;
@@ -41,8 +41,8 @@ export const checkString = (value, { field, label, pattern, message, allowed, tr
     return null;
 };
 
-// The field rules for registration, kept here so the same definitions can be
-// reused by login and by any later endpoint that accepts these values.
+// These are the field rules for registration. Login and other endpoints
+// that accept these values also use these same rules.
 export const REGISTRATION_RULES = {
     name: {
         field: 'name',
@@ -62,9 +62,9 @@ export const REGISTRATION_RULES = {
         pattern: PASSWORD_PATTERN,
         message:
             'Password must be 8-72 characters and include an uppercase letter, a lowercase letter, a number and a symbol',
-        // Passwords are never trimmed: a leading or trailing space is a
-        // legitimate character and silently removing it would change the
-        // password the user believes they chose.
+        // Do not trim a password. A space at the start or end is a valid
+        // character. If this function removed the space, the password would
+        // not match the password the user chose.
         trim: false,
     },
     role: {
@@ -85,8 +85,8 @@ export const LOGIN_RULES = {
     },
 };
 
-// The typeof check rejects "250" and { "$gt": 0 } alike, so neither reaches a
-// query or a document.
+// The typeof check rejects both "250" and { "$gt": 0 }. Neither value can
+// reach a query or a document.
 export const checkNumber = (value, { field, label, min, max, integer = false, required = true }) => {
     if (value === undefined || value === null || value === '') {
         return required ? { field, message: `${label} is required` } : null;
@@ -111,8 +111,9 @@ export const checkNumber = (value, { field, label, min, max, integer = false, re
     return null;
 };
 
-// Dates arrive as strings and are parsed here, so an unreadable one is a 400
-// naming the field rather than a CastError.
+// A date arrives as a string. This function parses the string. If the
+// function cannot read the date, it returns a 400 error that names the
+// field, not a CastError.
 export const checkDate = (value, { field, label, required = true }) => {
     if (isMissing(value)) {
         return required ? { field, message: `${label} is required` } : null;
@@ -129,15 +130,17 @@ export const checkDate = (value, { field, label, required = true }) => {
     return null;
 };
 
-// Picks the checker a rule asks for. A rule without a type is a string.
+// Pick the checker that a rule names. If a rule has no type, treat the
+// field as a string.
 const CHECKERS = {
     string: checkString,
     number: checkNumber,
     date: checkDate,
 };
 
-// Runs a rule table and returns every problem it found. Nested objects and
-// arrays report with a path, such as 'service.category' or 'services[0].rate'.
+// Run a rule table. Return every problem found. For a nested object or
+// array, the error path shows the location, for example
+// 'service.category' or 'services[0].rate'.
 export const checkRules = (source, rules) => {
     const errors = [];
     const body = source ?? {};
@@ -188,8 +191,9 @@ const checkNested = (value, rule) => {
     return prefix(checkRules(value, rules), `${field}.`);
 };
 
-// Rebuilds the body from the rule table alone, at every level of nesting, so an
-// undeclared field is dropped rather than handed to Mongoose.
+// Rebuild the body from the rule table only, at every level of nesting.
+// This function drops any field that is not in the rule table. It does not
+// pass an undeclared field to Mongoose.
 export const pickValidated = (source, rules) => {
     const validated = {};
     const body = source ?? {};
@@ -197,10 +201,10 @@ export const pickValidated = (source, rules) => {
     for (const rule of Object.values(rules)) {
         const value = body[rule.field];
 
-        // The checkers above treat null as "not supplied", so it is dropped
-        // here for the same reason rather than forwarded to Mongoose, which
-        // would answer it with its own wording or, for a list, be handed a
-        // null to map over.
+        // The checkers above treat null as "not supplied". For the same
+        // reason, this function drops a null value here. It does not pass
+        // the null to Mongoose, which would report it in its own wording,
+        // or, for a list, try to map over the null value.
         if (value === undefined || value === null) {
             continue;
         }
@@ -219,11 +223,11 @@ export const pickValidated = (source, rules) => {
     return validated;
 };
 
-// The rule tables for the six marketplace resources. Each mirrors what its
-// schema requires.
+// These are the rule tables for the six marketplace resources. Each table
+// matches the requirements of its schema.
 
-// Every role is allowed here, including Admin. What keeps that safe is
-// requireRole('Admin') on the route, not a restricted set of values.
+// Every role is allowed here, including Admin. requireRole('Admin') on the
+// route makes this safe, not a restricted set of values.
 export const ROLE_RULES = {
     role: { field: 'role', label: 'Role', allowed: USER_ROLES },
 };
@@ -240,7 +244,8 @@ export const SERVICE_RULES = {
 
 export const FREELANCER_RULES = {
     name: { field: 'name', label: 'Name', pattern: NAME_PATTERN, message: NAME_MESSAGE },
-    // Optional, and every entry in a supplied list is checked as a service.
+    // This field is optional. If the request supplies a list, this function
+    // checks each entry as a service.
     services: { field: 'services', label: 'Services', type: 'array', of: SERVICE_RULES, required: false },
 };
 
@@ -256,7 +261,7 @@ export const INVOICE_RULES = {
 
 export const BOOKING_RULES = {
     date: { field: 'date', label: 'Date', type: 'date' },
-    // The schema defaults this to 1, so it is optional.
+    // The schema sets this field to 1 by default, so it is optional.
     quantity: { field: 'quantity', label: 'Quantity', type: 'number', min: 1, integer: true, required: false },
     client: { field: 'client', label: 'Client', type: 'object', rules: CLIENT_RULES },
     freelancer: { field: 'freelancer', label: 'Freelancer', type: 'object', rules: FREELANCER_RULES },

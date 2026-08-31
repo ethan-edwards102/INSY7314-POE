@@ -1,9 +1,9 @@
 import { fail } from '../utils/respond.js';
 import { verifyToken } from '../utils/token.js';
 
-// Populates req.user from the Authorization header, so any route behind this
-// middleware can trust req.user.id / req.user.role without re-verifying the
-// token itself.
+// Set req.user from the Authorization header. A route behind this
+// middleware can then trust req.user.id and req.user.role, without a
+// second check of the token.
 export const authenticate = (req, res, next) => {
     const header = req.headers.authorization ?? '';
     const [scheme, token] = header.split(' ');
@@ -17,9 +17,9 @@ export const authenticate = (req, res, next) => {
         req.user = { id: payload.id, role: payload.role };
         return next();
     } catch (error) {
-        // Handled here rather than passed to the global error handler: an
-        // expired or tampered token isn't a database or server fault, and
-        // deserves its own message rather than a generic 500.
+        // Handle the error here. Do not pass it to the global error
+        // handler. An expired or tampered token is not a database fault or
+        // a server fault. It needs its own message, not a generic 500.
         const message = error.name === 'TokenExpiredError' ? 'Token has expired' : 'Invalid token';
 
         return fail(res, 401, message);

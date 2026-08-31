@@ -1,19 +1,18 @@
 import { fail } from './respond.js';
 
-// Errors are logged in full on the server, where the detail is useful, and
-// never returned to the client, where a stack trace or file path would tell an
-// attacker how the system is built.
+// Log the full error on the server. Do not send it to the client. A stack
+// trace or file path could tell an attacker how the system is built.
 export const logServerError = (error) => {
     console.error(`[${new Date().toISOString()}]`, error);
 };
 
-// Translates an error raised while talking to the database into a response.
-// Anything not recognised here is treated as a fault on our side and answered
-// with a generic 500, because an unrecognised error is exactly the kind whose
-// message is most likely to contain internal detail.
+// Turn a database error into a response. If this function does not
+// recognize the error, it treats the error as a server fault and sends a
+// generic 500 response. An unrecognized error is likely to contain internal
+// detail, so this function does not send its message to the client.
 export const handleError = (res, error) => {
-    // Schema rules rejected the document. Report which fields failed, in the
-    // same shape the request validation middleware uses.
+    // The schema rules reject the document. Report the fields that failed.
+    // Use the same response shape as the request validation middleware.
     if (error.name === 'ValidationError') {
         return fail(
             res,
@@ -26,14 +25,15 @@ export const handleError = (res, error) => {
         );
     }
 
-    // A value could not be coerced to the type the schema expects, typically a
-    // malformed ObjectId in the URL.
+    // The schema cannot convert a value to the type it expects. This usually
+    // means the URL has a malformed ObjectId.
     if (error.name === 'CastError') {
         return fail(res, 400, `Invalid value supplied for '${error.path}'`);
     }
 
-    // A unique index was violated. Mongo raises this at write time, so it
-    // arrives as a driver error rather than a Mongoose ValidationError.
+    // The write violates a unique index. Mongo raises this error at write
+    // time. Because of this, it arrives as a driver error, not as a
+    // Mongoose ValidationError.
     if (error.code === 11000) {
         const [field = 'value'] = Object.keys(error.keyPattern ?? {});
 

@@ -2,10 +2,10 @@ import User from '../models/User.js';
 import { handleError, notFound } from '../utils/handleError.js';
 import { ok } from '../utils/respond.js';
 
-// Every role, including Admin, is a valid target here: unlike registration,
-// which restricts self-service sign-up to SELF_SERVICE_ROLES, this is the one
-// endpoint meant to be able to grant Admin. What keeps that safe is
-// requireRole('Admin') on the route, not a restricted set of allowed values.
+// Every role, including Admin, is a valid target here. Registration
+// restricts self-service sign-up to SELF_SERVICE_ROLES, but this endpoint
+// is the one endpoint that can grant the Admin role. requireRole('Admin')
+// on the route makes this safe, not a restricted set of allowed values.
 export const updateUserRole = async (req, res) => {
     try {
         const { role } = req.validated;

@@ -11,7 +11,8 @@ import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
-// keeps an oversized payload from being used to exhaust server memory.
+// Limit the payload size. This stops an attacker from using a large
+// payload to exhaust server memory.
 app.use(express.json({ limit: '10kb' }));
 
 app.use('/auth', authRoutes);
@@ -23,8 +24,9 @@ app.use('/pops', popRoutes);
 app.use('/services', serviceRoutes);
 app.use('/users', userRoutes);
 
-// Registered after the routes so they only see requests nothing else handled.
-// The error handler must be last for Express to recognise it as one.
+// Register these after the routes. This way, they only see a request that
+// no route handled. The error handler must come last. Express only
+// recognizes a handler as an error handler when it comes last.
 app.use(notFoundHandler);
 app.use(errorHandler);
 
