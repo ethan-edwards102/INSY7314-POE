@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "HustleHub+ API",
-    "_postman_id": "7f3c1e20-4b9a-4d61-9f2e-8c5a1d0b3e77",
-    "description": "# HustleHub+ API, Part 1\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources.\n\n## Running the collection\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run `npm run test:api`. That feeds `baseUrl`, `adminEmail` and `adminPassword` in from\n   your `.env`, so the Admin password is never stored in this file.\n\nTo run it from the Postman app instead, turn off Settings > General > SSL certificate\nverification, because the development certificate is self signed, and create an\nenvironment supplying `adminEmail` and `adminPassword`.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 12 confirms the suite deleted every marketplace record it created.",
+    "_postman_id": "f56b799b-197e-4b45-a617-493a430aaea3",
+    "description": "# HustleHub+ API, Part 1\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources. 83 requests in 12 folders, 401 assertions.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 12 confirms the suite deleted every marketplace record it created.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -16,6 +16,39 @@
     ]
   },
   "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Runs before every request. A missing environment would otherwise surface as 83",
+          "// failing requests, which buries the one thing that actually went wrong. Skipping",
+          "// the request keeps the run readable and says exactly what to fix.",
+          "var required = ['baseUrl', 'adminEmail', 'adminPassword'];",
+          "var missing = required.filter(function (key) {",
+          "    var value = pm.variables.get(key);",
+          "    return value === undefined || String(value).trim() === '';",
+          "});",
+          "",
+          "if (missing.length > 0) {",
+          "    var advice =",
+          "        'Missing environment value(s): ' + missing.join(', ') + '. ' +",
+          "        'Import postman/HustleHub-Plus.postman_environment.json, select the ' +",
+          "        'HustleHub+ Local environment in the top right, then fill in adminPassword ' +",
+          "        'so that it matches ADMIN_PASSWORD in your .env.';",
+          "",
+          "    // skipRequest needs Postman 10.19 or newer. On anything older, fail loudly",
+          "    // instead, so the reason is still visible rather than silently missing.",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "        console.error('Skipped. ' + advice);",
+          "        pm.execution.skipRequest();",
+          "    } else {",
+          "        throw new Error(advice);",
+          "    }",
+          "}"
+        ]
+      }
+    },
     {
       "listen": "test",
       "script": {
@@ -38,23 +71,7 @@
       }
     }
   ],
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "https://localhost:5001",
-      "type": "string"
-    },
-    {
-      "key": "adminEmail",
-      "value": "admin@hustlehub.local",
-      "type": "string"
-    },
-    {
-      "key": "adminPassword",
-      "value": "",
-      "type": "string"
-    }
-  ],
+  "variable": [],
   "item": [
     {
       "name": "1. Registration, successful",
@@ -95,7 +112,7 @@
                   "    pm.expect(pm.response.text()).to.not.include('$2b$');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('tyreeceId', body.data._id);"
+                  "pm.environment.set('tyreeceId', body.data._id);"
                 ]
               }
             }
@@ -165,7 +182,7 @@
                   "    pm.expect(pm.response.text()).to.not.include('$2b$');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('dylanId', body.data._id);",
+                  "pm.environment.set('dylanId', body.data._id);",
                   "",
                   "pm.test('Ignores the fields a caller may not set', function () {",
                   "    pm.expect(body.data._id).to.not.eql('000000000000000000000000');",
@@ -242,7 +259,7 @@
                   "    pm.expect(pm.response.text()).to.not.include('$2b$');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('ethanId', body.data._id);"
+                  "pm.environment.set('ethanId', body.data._id);"
                 ]
               }
             }
@@ -312,7 +329,7 @@
                   "    pm.expect(pm.response.text()).to.not.include('$2b$');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('ndumsioId', body.data._id);"
+                  "pm.environment.set('ndumsioId', body.data._id);"
                 ]
               }
             }
@@ -861,7 +878,7 @@
                 "exec": [
                   "// Built here rather than stored in the request so the collection file",
                   "// does not need to contain 20kb of padding.",
-                  "pm.collectionVariables.set('oversizedName', new Array(20001).join('x'));"
+                  "pm.environment.set('oversizedName', new Array(20001).join('x'));"
                 ]
               }
             },
@@ -999,7 +1016,7 @@
                   "    // browser decoder, hence Buffer.",
                   "    var segment = body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
                   "    var payload = JSON.parse(Buffer.from(segment, 'base64').toString('utf8'));",
-                  "    pm.expect(payload.id).to.eql(pm.collectionVariables.get('tyreeceId'));",
+                  "    pm.expect(payload.id).to.eql(pm.environment.get('tyreeceId'));",
                   "    pm.expect(payload.role).to.eql('Client');",
                   "});",
                   "",
@@ -1007,7 +1024,7 @@
                   "    pm.expect(pm.response.text()).to.not.include('$2b$');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('authToken', body.token);"
+                  "pm.environment.set('authToken', body.token);"
                 ]
               }
             }
@@ -1066,7 +1083,7 @@
                   "    pm.expect(payload.role).to.eql('Admin');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('adminToken', body.token);"
+                  "pm.environment.set('adminToken', body.token);"
                 ]
               }
             }
@@ -1334,6 +1351,17 @@
           "name": "A token that is not a JWT is refused",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Built here rather than written into the request, so that no literal bearer",
+                  "// token is stored in the collection file.",
+                  "pm.environment.set('malformedToken', 'not-a-real-token');"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -1354,7 +1382,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer not-a-real-token"
+                "value": "Bearer {{malformedToken}}"
               }
             ],
             "url": {
@@ -1372,6 +1400,34 @@
         {
           "name": "A forged Admin token is refused",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Assembles a token that is correctly shaped and claims the Admin role, but",
+                  "// carries a signature this server never produced. Building it here keeps a",
+                  "// literal JWT out of the collection file, which secret scanners flag on import.",
+                  "function base64url(text) {",
+                  "    return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(text))",
+                  "        .replace(/\\+/g, '-')",
+                  "        .replace(/\\//g, '_')",
+                  "        .replace(/=+$/, '');",
+                  "}",
+                  "",
+                  "var header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));",
+                  "var payload = base64url(JSON.stringify({",
+                  "    id: '000000000000000000000000',",
+                  "    role: 'Admin',",
+                  "    iat: 1700000000,",
+                  "    exp: 4102444800",
+                  "}));",
+                  "var signature = base64url('fake-signature-not-signed-by-this-server');",
+                  "",
+                  "pm.environment.set('forgedAdminToken', header + '.' + payload + '.' + signature);"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -1393,7 +1449,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMCIsInJvbGUiOiJBZG1pbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.ZmFrZS1zaWduYXR1cmUtbm90LXNpZ25lZC1ieS10aGlzLXNlcnZlcg"
+                "value": "Bearer {{forgedAdminToken}}"
               }
             ],
             "url": {
@@ -1489,7 +1545,7 @@
                   "",
                   "pm.test('Returns the updated account', function () {",
                   "    var body = pm.response.json();",
-                  "    pm.expect(body.data._id).to.eql(pm.collectionVariables.get('dylanId'));",
+                  "    pm.expect(body.data._id).to.eql(pm.environment.get('dylanId'));",
                   "    pm.expect(body.data.role).to.eql('Freelancer');",
                   "});",
                   "",
@@ -1760,7 +1816,7 @@
                   "    pm.expect(data.rateType).to.eql('Hour');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('serviceId', pm.response.json().data._id);"
+                  "pm.environment.set('serviceId', pm.response.json().data._id);"
                 ]
               }
             }
@@ -1816,7 +1872,7 @@
                   "    pm.expect(body.data).to.be.an('array');",
                   "    pm.expect(body.count).to.eql(body.data.length);",
                   "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.collectionVariables.get('serviceId'));",
+                  "    pm.expect(ids).to.include(pm.environment.get('serviceId'));",
                   "});"
                 ]
               }
@@ -1855,7 +1911,7 @@
                   "});",
                   "",
                   "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('serviceId'));",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('serviceId'));",
                   "});"
                 ]
               }
@@ -1896,7 +1952,7 @@
                   "",
                   "pm.test('Returns the changed record', function () {",
                   "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('serviceId'));",
+                  "    pm.expect(data._id).to.eql(pm.environment.get('serviceId'));",
                   "    pm.expect(data.rate).to.eql(300);",
                   "    pm.expect(data.rateType).to.eql('Day');",
                   "});"
@@ -2152,7 +2208,7 @@
                   "    pm.expect(data.name).to.eql('Tyreece S');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('clientId', pm.response.json().data._id);"
+                  "pm.environment.set('clientId', pm.response.json().data._id);"
                 ]
               }
             }
@@ -2208,7 +2264,7 @@
                   "    pm.expect(body.data).to.be.an('array');",
                   "    pm.expect(body.count).to.eql(body.data.length);",
                   "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.collectionVariables.get('clientId'));",
+                  "    pm.expect(ids).to.include(pm.environment.get('clientId'));",
                   "});"
                 ]
               }
@@ -2247,7 +2303,7 @@
                   "});",
                   "",
                   "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('clientId'));",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('clientId'));",
                   "});"
                 ]
               }
@@ -2288,7 +2344,7 @@
                   "",
                   "pm.test('Returns the changed record', function () {",
                   "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('clientId'));",
+                  "    pm.expect(data._id).to.eql(pm.environment.get('clientId'));",
                   "    pm.expect(data.name).to.eql('Dylan Olsen');",
                   "});"
                 ]
@@ -2525,7 +2581,7 @@
                   "    pm.expect(data.services[0].category).to.eql('HouseCleaning');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('freelancerId', pm.response.json().data._id);"
+                  "pm.environment.set('freelancerId', pm.response.json().data._id);"
                 ]
               }
             }
@@ -2581,7 +2637,7 @@
                   "    pm.expect(body.data).to.be.an('array');",
                   "    pm.expect(body.count).to.eql(body.data.length);",
                   "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.collectionVariables.get('freelancerId'));",
+                  "    pm.expect(ids).to.include(pm.environment.get('freelancerId'));",
                   "});"
                 ]
               }
@@ -2620,7 +2676,7 @@
                   "});",
                   "",
                   "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('freelancerId'));",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('freelancerId'));",
                   "});"
                 ]
               }
@@ -2661,7 +2717,7 @@
                   "",
                   "pm.test('Returns the changed record', function () {",
                   "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('freelancerId'));",
+                  "    pm.expect(data._id).to.eql(pm.environment.get('freelancerId'));",
                   "    pm.expect(data.name).to.eql('Ndumsio J');",
                   "    pm.expect(data.services).to.have.lengthOf(2);",
                   "});"
@@ -2914,7 +2970,7 @@
                   "    pm.expect(data.pop).to.have.property('datePaid');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('invoiceId', pm.response.json().data._id);"
+                  "pm.environment.set('invoiceId', pm.response.json().data._id);"
                 ]
               }
             }
@@ -2970,7 +3026,7 @@
                   "    pm.expect(body.data).to.be.an('array');",
                   "    pm.expect(body.count).to.eql(body.data.length);",
                   "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.collectionVariables.get('invoiceId'));",
+                  "    pm.expect(ids).to.include(pm.environment.get('invoiceId'));",
                   "});"
                 ]
               }
@@ -3009,7 +3065,7 @@
                   "});",
                   "",
                   "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('invoiceId'));",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('invoiceId'));",
                   "});"
                 ]
               }
@@ -3050,7 +3106,7 @@
                   "",
                   "pm.test('Returns the changed record', function () {",
                   "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('invoiceId'));",
+                  "    pm.expect(data._id).to.eql(pm.environment.get('invoiceId'));",
                   "    pm.expect(data.amount).to.eql(1750);",
                   "});"
                 ]
@@ -3306,7 +3362,7 @@
                   "    pm.expect(data.datePaid).to.include('2026-09-02');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('popId', pm.response.json().data._id);"
+                  "pm.environment.set('popId', pm.response.json().data._id);"
                 ]
               }
             }
@@ -3362,7 +3418,7 @@
                   "    pm.expect(body.data).to.be.an('array');",
                   "    pm.expect(body.count).to.eql(body.data.length);",
                   "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.collectionVariables.get('popId'));",
+                  "    pm.expect(ids).to.include(pm.environment.get('popId'));",
                   "});"
                 ]
               }
@@ -3401,7 +3457,7 @@
                   "});",
                   "",
                   "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('popId'));",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('popId'));",
                   "});"
                 ]
               }
@@ -3442,7 +3498,7 @@
                   "",
                   "pm.test('Returns the changed record', function () {",
                   "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('popId'));",
+                  "    pm.expect(data._id).to.eql(pm.environment.get('popId'));",
                   "    pm.expect(data.datePaid).to.include('2026-09-03');",
                   "});"
                 ]
@@ -3642,7 +3698,7 @@
                   "    pm.expect(data.service.category).to.eql('DogGrooming');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('bookingId', pm.response.json().data._id);"
+                  "pm.environment.set('bookingId', pm.response.json().data._id);"
                 ]
               }
             }
@@ -3698,7 +3754,7 @@
                   "    pm.expect(body.data).to.be.an('array');",
                   "    pm.expect(body.count).to.eql(body.data.length);",
                   "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.collectionVariables.get('bookingId'));",
+                  "    pm.expect(ids).to.include(pm.environment.get('bookingId'));",
                   "});"
                 ]
               }
@@ -3737,7 +3793,7 @@
                   "});",
                   "",
                   "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('bookingId'));",
+                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('bookingId'));",
                   "});"
                 ]
               }
@@ -3778,7 +3834,7 @@
                   "",
                   "pm.test('Returns the changed record', function () {",
                   "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.collectionVariables.get('bookingId'));",
+                  "    pm.expect(data._id).to.eql(pm.environment.get('bookingId'));",
                   "    pm.expect(data.quantity).to.eql(3);",
                   "    pm.expect(data.client.name).to.eql('Dylan Olsen');",
                   "    pm.expect(data.service.category).to.eql('HouseCleaning');",
@@ -3890,7 +3946,7 @@
                   "    pm.expect(data.client.name).to.eql('Tyreece S');",
                   "});",
                   "",
-                  "pm.collectionVariables.set('strippedBookingId', pm.response.json().data._id);"
+                  "pm.environment.set('strippedBookingId', pm.response.json().data._id);"
                 ]
               }
             }
@@ -4255,5 +4311,8 @@
         }
       ]
     }
-  ]
+  ],
+  "protocolProfileBehavior": {
+    "strictSSL": false
+  }
 }

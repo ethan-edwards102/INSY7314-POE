@@ -216,7 +216,7 @@ INSY7314-POE/
 +-- models/                Mongoose schemas, constraints, password hashing
 +-- utils/                 Response envelope, token signing, validation rules
 |
-+-- postman/               The 83 request test collection
++-- postman/               The 83 request test collection and its environment
 +-- scripts/               certs, seed:admin, db:reset, test:api
 |
 +-- .env.example           Template of every variable, committed, no real values
@@ -725,8 +725,12 @@ deployments, and every credential in it, is read from the environment rather tha
 committed, so the codebase could be made public at any moment without exposing a
 secret (Wiggins, 2017; OWASP, n.d. l). `.env`, `certs/`, `*.pem` and `*.key`
 are gitignored, and `.env.example` documents every key with a safe placeholder. The
-Postman collection ships with the admin password blank and it is injected from
-`.env` at run time.
+Postman collection stores no values at all: it declares no variables, and every
+token and id its tests capture at run time is written to the environment rather
+than back into the collection. A collection that held them would carry live JWTs
+into its own export file the moment anyone ran it and shared the result. The
+committed environment ships with `adminPassword` blank and marked secret, so the
+value is filled in locally and never committed.
 
 ### 5.7 Summary
 
@@ -863,8 +867,8 @@ curl -k -X POST https://localhost:5001/auth/register \
 
 `-k` skips certificate verification, which is needed because the development
 certificate is self signed. A `201` with a token means the stack works end to
-end. Postman users must turn off **Settings > General > SSL certificate
-verification** for the same reason.
+end. The Postman collection carries the same allowance in its own settings, so it
+runs against the development certificate without any change to Postman itself.
 
 ### 6.7 Scripts
 
@@ -884,7 +888,8 @@ verification** for the same reason.
 | `JWT_SECRET is still set to the .env.example placeholder` | Run the `randomBytes` command in 6.3 |
 | `TLS certificate not found` | `npm run certs` |
 | `MongooseServerSelectionError` | MongoDB is not running, see the table in 6.1 |
-| `Browser or Postman warns "not private"` | Expected, the certificate is self signed. Proceed or disable SSL verification |
+| `Browser or Postman warns "not private"` | Expected, the certificate is self signed. Proceed, or disable SSL verification |
+| `Postman skips every request` | The environment is not selected, or `adminPassword` is blank. The console names the missing variable |
 | `The database holds N accounts, and the suite expects only the seeded Admin` | `npm run db:reset` |
 
 ---
@@ -1147,10 +1152,30 @@ rather than a confusing test failure. It then injects `baseUrl`, `adminEmail` an
 `adminPassword` from `.env`, which is why the admin password is not stored in the
 collection file.
 
-**In the Postman app.** Import
-`postman/HustleHub-Plus.postman_collection.json`, turn off **Settings > General >
-SSL certificate verification**, create an environment supplying `adminEmail` and
-`adminPassword`, run `npm run db:reset`, then **Run collection**.
+**In the Postman app.** Import both files from `postman/`:
+
+1. `HustleHub-Plus.postman_collection.json`, the 83 requests.
+2. `HustleHub-Plus.postman_environment.json`, the environment.
+
+Select the **HustleHub+ Local** environment in the top right and fill in the one
+blank value, `adminPassword`, so that it matches `ADMIN_PASSWORD` in your `.env`.
+`baseUrl` and `adminEmail` already carry working defaults. Nothing needs to be
+filled in on the collection itself, so a fresh clone is two imports and one
+password.
+
+Then run `npm run db:reset` and choose **Run collection**.
+
+The collection turns off certificate verification for its own requests, because
+the development certificate is self signed, so nothing needs changing in Postman.
+If a request still reports a certificate error, turn off **Settings > General >
+SSL certificate verification** as well.
+
+If a value is missing, a collection level pre-request script skips every request
+and prints which variable to set, rather than letting the run fail 83 times over.
+
+The collection declares no variables of its own. Configuration and the tokens and
+ids captured during a run all live in the environment, so the collection file
+never accumulates credentials and imports without any secret warning.
 
 ### 8.2 Coverage
 
