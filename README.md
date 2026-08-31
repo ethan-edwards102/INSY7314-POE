@@ -4,7 +4,7 @@
 
 - **Module:** INSY7314 - Information Systems 3D
 - **Part:** 1
-- **Youtube Video:** 
+- **Youtube Video:** https://youtu.be/dxhXuTjIDsg
 
 ---
 
@@ -1289,7 +1289,7 @@ change.
 
 ### 10.1 Video
 
-> **[Video link]**
+> **[Video link](https://youtu.be/dxhXuTjIDsg)**
 
 The recording shows the API running, a successful registration, and a login
 producing a token:
