@@ -4,7 +4,7 @@
 
 - **Module:** INSY7314 - Information Systems 3D
 - **Part:** 1
-- **Youtube Video:** https://youtu.be/dxhXuTjIDsg
+- **Youtube Video:** [Watch here](https://youtu.be/dxhXuTjIDsg)
 
 ---
 
