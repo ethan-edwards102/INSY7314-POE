@@ -41,3 +41,5 @@
 - https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#protect-against-automated-attacks
 - https://helmet.js.org/
 - https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
+- https://expressjs.com/en/resources/middleware/cors.html
+- https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS

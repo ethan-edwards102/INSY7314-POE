@@ -6,7 +6,7 @@ import incomeRoutes from './routes/incomeRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
-import { securityHeaders } from './middleware/securityHeaders.js';
+import { corsPolicy, securityHeaders } from './middleware/securityHeaders.js';
 import { globalLimiter } from './middleware/rateLimiters.js';
 import { sanitizeRequest } from './middleware/sanitize.js';
 import { ok } from './utils/respond.js';
@@ -18,6 +18,9 @@ app.disable('x-powered-by');
 
 // Set the security headers first so every response carries them, including an error.
 app.use(securityHeaders);
+
+// Answer a preflight request here, before the limiter, so a browser check never uses a request allowance.
+app.use(corsPolicy);
 
 // Count every request first so a flood stops before any parsing or database work.
 app.use(globalLimiter);
