@@ -1,10 +1,10 @@
+import User from '../models/User.js';
 import { fail } from '../utils/respond.js';
 import { verifyToken } from '../utils/token.js';
 
-// Set req.user from the Authorization header. A route behind this
-// middleware can then trust req.user.id and req.user.role, without a
-// second check of the token.
-export const authenticate = (req, res, next) => {
+// Set req.user from the Authorization header. The role comes from the
+// database, so a demoted or deleted user loses access at once.
+export const authenticate = async (req, res, next) => {
     const header = req.headers.authorization ?? '';
     const [scheme, token] = header.split(' ');
 
@@ -12,10 +12,10 @@ export const authenticate = (req, res, next) => {
         return fail(res, 401, 'Authentication required');
     }
 
+    let payload;
+
     try {
-        const payload = verifyToken(token);
-        req.user = { id: payload.id, role: payload.role };
-        return next();
+        payload = verifyToken(token);
     } catch (error) {
         // Handle the error here. Do not pass it to the global error
         // handler. An expired or tampered token is not a database fault or
@@ -24,4 +24,22 @@ export const authenticate = (req, res, next) => {
 
         return fail(res, 401, message);
     }
+
+    try {
+        const user = await User.findById(payload.id).select('role').lean();
+
+        if (!user) {
+            return fail(res, 401, 'Invalid token');
+        }
+
+        req.user = { id: payload.id, role: user.role };
+
+        return next();
+    } catch (error) {
+        return next(error);
+    }
 };
+
+/* ref
+https://mongoosejs.com/docs/api/query.html#Query.prototype.lean()
+*/
