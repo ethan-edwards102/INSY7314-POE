@@ -8,14 +8,10 @@ import { ROLE_RULES } from '../utils/validators.js';
 
 const router = express.Router();
 
-router.get('/', authenticate, requireRole('Admin'), userController.getUsers);
-router.patch(
-    '/:id/role',
-    authenticate,
-    requireRole('Admin'),
-    validateObjectId,
-    validateBody(ROLE_RULES),
-    userController.updateUserRole
-);
+// Every user route is for the Admin, so a later route is protected by default.
+router.use(authenticate, requireRole('Admin'));
+
+router.get('/', userController.getUsers);
+router.patch('/:id/role', validateObjectId, validateBody(ROLE_RULES), userController.updateUserRole);
 
 export default router;

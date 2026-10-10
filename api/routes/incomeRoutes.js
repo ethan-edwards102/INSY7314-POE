@@ -5,7 +5,9 @@ import { requireRole } from '../middleware/authorize.js';
 
 const router = express.Router();
 
+router.use(authenticate);
+
 // Only a Freelancer earns income, so the other roles get 403.
-router.get('/me', authenticate, requireRole('Freelancer'), incomeController.getMyIncome);
+router.get('/me', requireRole('Freelancer'), incomeController.getMyIncome);
 
 export default router;
