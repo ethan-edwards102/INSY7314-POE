@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Booking from '../models/Booking.js';
 import Gig from '../models/Gig.js';
+import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 
 // Multiply in whole cents, because a decimal product can round the wrong way.
@@ -8,7 +9,6 @@ export const computeTotal = (unitRate, quantity) => (Math.round(unitRate * 100) 
 
 // Return null when the gig is not open to this client, so the caller answers 404.
 export const createBooking = async (clientId, { gig: gigId, scheduledFor, quantity }) => {
-    // Refuse an inactive gig and the own gig of the caller.
     // Mark the operator as trusted, because sanitizeFilter wraps any other operator object.
     const gig = await Gig.findOne({
         _id: gigId,
@@ -17,6 +17,11 @@ export const createBooking = async (clientId, { gig: gigId, scheduledFor, quanti
     });
 
     if (!gig) {
+        return null;
+    }
+
+    // Refuse a gig whose owner lost the Freelancer role, because that owner cannot read the booking or the income.
+    if (!(await User.exists({ _id: gig.freelancer, role: 'Freelancer' }))) {
         return null;
     }
 
