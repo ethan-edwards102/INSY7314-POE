@@ -3,6 +3,21 @@ import { fail } from '../utils/respond.js';
 // Match a leading "$", a dot, or a "[$" bracket key, which the query string parser leaves flat.
 const FORBIDDEN_KEY = /^\$|\.|\[\s*\$/;
 
+const MAX_DEPTH = 20;
+
+// Report a value nested deeper than the limit, so the walker never overflows the stack.
+export const isTooDeep = (value, depth = 0) => {
+    if (value === null || typeof value !== 'object') {
+        return false;
+    }
+
+    if (depth >= MAX_DEPTH) {
+        return true;
+    }
+
+    return Object.values(value).some((child) => isTooDeep(child, depth + 1));
+};
+
 // Return the path of every forbidden key, so the client sees where the problem is.
 export const findForbiddenKeys = (value, path = '') => {
     if (value === null || typeof value !== 'object') {
@@ -25,8 +40,11 @@ export const findForbiddenKeys = (value, path = '') => {
 };
 
 // Reject the request instead of rewriting it, so an attacker gets no silent success.
-// Read req.query and do not assign it, because Express 5 defines it as a getter.
 export const sanitizeRequest = (req, res, next) => {
+    if ([req.body, req.query, req.params].some((part) => isTooDeep(part))) {
+        return fail(res, 400, 'Request is nested too deeply');
+    }
+
     const errors = [
         ...findForbiddenKeys(req.body, 'body'),
         ...findForbiddenKeys(req.query, 'query'),

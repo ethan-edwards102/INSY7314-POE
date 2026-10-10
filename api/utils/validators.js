@@ -9,7 +9,7 @@ const NAME_MESSAGE = 'Name must be 2-50 letters and may contain spaces, hyphens 
 // Remove the Admin role. This stops a user from giving themselves the Admin role.
 export const SELF_SERVICE_ROLES = USER_ROLES.filter((role) => role !== 'Admin');
 
-// Remove every tag and attribute. Restore the ampersand so "Mowing & edging" stays readable.
+// Remove every tag and restore the ampersand, so a title such as "Mowing & edging" stays readable.
 export const stripHtml = (value) =>
     sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).replaceAll('&amp;', '&');
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals';
-import { findForbiddenKeys, sanitizeRequest } from '../middleware/sanitize.js';
+import { findForbiddenKeys, isTooDeep, sanitizeRequest } from '../middleware/sanitize.js';
 import { GIG_RULES, checkRules, pickValidated, stripHtml } from '../utils/validators.js';
 
 describe('findForbiddenKeys', () => {
@@ -28,6 +28,13 @@ describe('findForbiddenKeys', () => {
 
     test('allows a dollar sign that is not at the start of a key', () => {
         expect(findForbiddenKeys({ price$: 1 }, 'body')).toEqual([]);
+    });
+});
+
+describe('isTooDeep', () => {
+    test('accepts ordinary nesting and rejects extreme nesting', () => {
+        expect(isTooDeep({ items: [{ tags: ['a'] }] })).toBe(false);
+        expect(isTooDeep(JSON.parse(`${'['.repeat(5000)}${']'.repeat(5000)}`))).toBe(true);
     });
 });
 
@@ -62,10 +69,22 @@ describe('sanitizeRequest', () => {
         });
     });
 
-    test('checks the query and params as well as the body', () => {
-        const { res } = run({ body: undefined, query: { 'search[$regex]': '.*' }, params: { id: 'x' } });
+    test('checks the query as well as the body', () => {
+        const { res } = run({ body: undefined, query: { 'search[$regex]': '.*' }, params: {} });
 
         expect(res.body.errors.map((e) => e.field)).toEqual(['query.search[$regex]']);
+    });
+
+    test('answers 400 and does not throw on a 5000 level nested array', () => {
+        const deep = { a: JSON.parse(`${'['.repeat(5000)}${']'.repeat(5000)}`) };
+        let outcome;
+
+        expect(() => {
+            outcome = run({ body: deep, query: {}, params: {} });
+        }).not.toThrow();
+        expect(outcome.called).toBe(false);
+        expect(outcome.res.code).toBe(400);
+        expect(outcome.res.body.message).toBe('Request is nested too deeply');
     });
 
     test('passes a clean request to the next handler', () => {
