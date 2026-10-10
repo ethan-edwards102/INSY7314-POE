@@ -91,6 +91,8 @@ newman.run(
 
         // Newmans callback does not set an exit code.
         if (summary.run.failures.length > 0) {
+            // The limiters keep their counters in memory, so only a restart clears them.
+            console.error('If a request answered 429, restart the API and reset the database before a new run.');
             process.exit(1);
         }
     }

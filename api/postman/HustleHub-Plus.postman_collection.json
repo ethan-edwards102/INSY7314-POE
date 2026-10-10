@@ -2,7 +2,7 @@
   "info": {
     "name": "HustleHub+ API",
     "_postman_id": "f56b799b-197e-4b45-a617-493a430aaea3",
-    "description": "# HustleHub+ API, Part 2\n\nCovers registration, login, authentication, role enforcement, gigs, bookings, transactions,\nincome, Admin role changes and sanitisation. 147 requests in 12 folders, 605 assertions.\n\nThe folders run in order and share one set of accounts:\n\n1. Registration, successful. Creates the Clients and the Freelancers.\n2. Registration, invalid scenarios. Duplicates, injection, weak input and oversized bodies.\n3. Login. Valid and invalid credentials.\n4. Authentication required. No token, a broken token and a forged one on the gig routes.\n5. Role enforcement. Only the Admin changes a role.\n6. Gigs. Create, browse, search, update, deactivate and delete, with ownership checks.\n7. Bookings. Server side totals, validation, and who may read which booking.\n8. Transactions. Read only records, visible to the parties and the Admin.\n9. Income. The Freelancer income summary and who may read it.\n10. Current user and role changes. Profile, user list, and a role change that takes effect at once.\n11. Deleted gigs are gone and the records remain. Booked gigs are inactive, and bookings and transactions remain.\n12. Sanitisation. Operator keys, dotted keys, deep nesting, markup in gigs and operator shaped ids.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in folder 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Folder 11 confirms the suite deleted the gigs it should delete, and that bookings and transactions remain.",
+    "description": "# HustleHub+ API, Part 2\n\nCovers registration, login, authentication, role enforcement, gigs, bookings, transactions,\nincome, Admin role changes, sanitisation and rate limits. 167 requests in 13 folders, 675 assertions.\n\nThe folders run in order and share one set of accounts:\n\n1. Registration, successful. Creates the Clients and the Freelancers.\n2. Registration, invalid scenarios. Duplicates, injection, weak input and oversized bodies.\n3. Login. Valid and invalid credentials.\n4. Authentication required. No token, a broken token and a forged one on the gig routes.\n5. Role enforcement. Only the Admin changes a role.\n6. Gigs. Create, browse, search, update, deactivate and delete, with ownership checks.\n7. Bookings. Server side totals, validation, and who may read which booking.\n8. Transactions. Read only records, visible to the parties and the Admin.\n9. Income. The Freelancer income summary and who may read it.\n10. Current user and role changes. Profile, user list, and a role change that takes effect at once.\n11. Deleted gigs are gone and the records remain. Booked gigs are inactive, and bookings and transactions remain.\n12. Sanitisation. Operator keys, dotted keys, deep nesting, markup in gigs and operator shaped ids.\n13. Rate limits. Failed logins and repeated bookings reach a 429 with Retry-After. Run this last, because it uses up limiter counters.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in folder 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Folder 11 confirms the suite deleted the gigs it should delete, and that bookings and transactions remain.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -7905,6 +7905,405 @@
                 {
                   "key": "token",
                   "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Rate limits",
+      "item": [
+        {
+          "name": "Repeated failed logins are blocked",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('rateLimitEmail') === undefined || pm.environment.get('rateLimitEmail') === '') {",
+                  "    pm.environment.set('rateLimitEmail', 'rate.limit.' + Date.now() + '@hustlehub.test');",
+                  "    pm.environment.set('rateLimitLoginAttempts', 0);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var routeHeader = function (name) {",
+                  "    var values = pm.response.headers.all().filter(function (h) { return h.key.toLowerCase() === name.toLowerCase(); });",
+                  "    return values.length > 0 ? values[values.length - 1].value : '';",
+                  "};",
+                  "var remaining = function () {",
+                  "    var match = routeHeader('RateLimit').match(/;\\s*r=(\\d+)/);",
+                  "    return match ? Number(match[1]) : NaN;",
+                  "};",
+                  "var attempts = Number(pm.environment.get('rateLimitLoginAttempts')) + 1;",
+                  "pm.environment.set('rateLimitLoginAttempts', attempts);",
+                  "",
+                  "if (pm.response.code !== 429 && attempts < 12) {",
+                  "    pm.test('A wrong password answers 401 until the limit is reached', function () {",
+                  "        pm.response.to.have.status(401);",
+                  "    });",
+                  "    pm.execution.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "    pm.environment.unset('rateLimitEmail');",
+                  "    pm.test('The limiter blocks the attempt after the allowed number of failures', function () {",
+                  "        var quota = Number((routeHeader('RateLimit-Policy').match(/;\\s*q=(\\d+)/) || [])[1]);",
+                  "        pm.response.to.have.status(429);",
+                  "        pm.expect(attempts).to.eql(quota + 1);",
+                  "    });",
+                  "",
+                  "    pm.test('The message names the login limit and the wait', function () {",
+                  "        var body = pm.response.json();",
+                  "        pm.expect(body.success).to.be.false;",
+                  "        pm.expect(body.message).to.match(/^Too many login attempts\\. Try again in \\d+ minutes\\.$/);",
+                  "    });",
+                  "",
+                  "    pm.test('Retry-After tells the client how long to wait', function () {",
+                  "        var wait = Number(pm.response.headers.get('Retry-After'));",
+                  "        pm.expect(Number.isInteger(wait)).to.be.true;",
+                  "        pm.expect(wait).to.be.above(0);",
+                  "    });",
+                  "",
+                  "    pm.test('The standard RateLimit headers are sent and the legacy ones are not', function () {",
+                  "        pm.expect(pm.response.headers.has('RateLimit')).to.be.true;",
+                  "        pm.expect(pm.response.headers.has('RateLimit-Policy')).to.be.true;",
+                  "        pm.expect(pm.response.headers.has('X-RateLimit-Limit')).to.be.false;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "The login limiter counts failed attempts for one IP and email. The loop stops at the first 429, or after 12 tries so a broken limiter cannot loop for ever.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{rateLimitEmail}}\",\n  \"password\": \"Wrong!Pass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A correct login by another account still works",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var routeHeader = function (name) {",
+                  "    var values = pm.response.headers.all().filter(function (h) { return h.key.toLowerCase() === name.toLowerCase(); });",
+                  "    return values.length > 0 ? values[values.length - 1].value : '';",
+                  "};",
+                  "var remaining = function () {",
+                  "    var match = routeHeader('RateLimit').match(/;\\s*r=(\\d+)/);",
+                  "    return match ? Number(match[1]) : NaN;",
+                  "};",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The other account receives a token', function () {",
+                  "    pm.expect(pm.response.json().token).to.be.a('string');",
+                  "    pm.environment.set('rateLimitLoginRemaining', remaining());",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "The login key is the IP plus the email, so a blocked email must not lock out a different account.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ethan.edwards@hustlehub.test\",\n  \"password\": \"Ethan!Pass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A correct login does not use up an attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var routeHeader = function (name) {",
+                  "    var values = pm.response.headers.all().filter(function (h) { return h.key.toLowerCase() === name.toLowerCase(); });",
+                  "    return values.length > 0 ? values[values.length - 1].value : '';",
+                  "};",
+                  "var remaining = function () {",
+                  "    var match = routeHeader('RateLimit').match(/;\\s*r=(\\d+)/);",
+                  "    return match ? Number(match[1]) : NaN;",
+                  "};",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The remaining attempts do not drop after a correct login', function () {",
+                  "    pm.expect(remaining()).to.be.at.least(0);",
+                  "    pm.expect(remaining()).to.eql(pm.environment.get('rateLimitLoginRemaining'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "The login limiter counts failed attempts only. A second correct login must show the same remaining attempts as the first.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ethan.edwards@hustlehub.test\",\n  \"password\": \"Ethan!Pass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Count Dylan's bookings before the spam",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Stores the booking count', function () {",
+                  "    pm.environment.set('rateLimitBookingCount', pm.response.json().count);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "The count lets the later request prove the rejected bookings created nothing.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{dylanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Repeated booking attempts are blocked",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var routeHeader = function (name) {",
+                  "    var values = pm.response.headers.all().filter(function (h) { return h.key.toLowerCase() === name.toLowerCase(); });",
+                  "    return values.length > 0 ? values[values.length - 1].value : '';",
+                  "};",
+                  "var remaining = function () {",
+                  "    var match = routeHeader('RateLimit').match(/;\\s*r=(\\d+)/);",
+                  "    return match ? Number(match[1]) : NaN;",
+                  "};",
+                  "var attempts = Number(pm.environment.get('rateLimitBookingAttempts') || 0) + 1;",
+                  "pm.environment.set('rateLimitBookingAttempts', attempts);",
+                  "",
+                  "if (pm.response.code !== 429 && attempts < 15) {",
+                  "    pm.test('An invalid booking answers 400 until the limit is reached', function () {",
+                  "        pm.response.to.have.status(400);",
+                  "    });",
+                  "    pm.environment.set('rateLimitBookingRemaining', remaining());",
+                  "    pm.execution.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "    pm.environment.set('rateLimitBookingAttempts', 0);",
+                  "    pm.test('The limiter blocks the user once no attempts remain', function () {",
+                  "        pm.response.to.have.status(429);",
+                  "        pm.expect(attempts).to.be.above(1);",
+                  "        pm.expect(pm.environment.get('rateLimitBookingRemaining')).to.eql(0);",
+                  "    });",
+                  "",
+                  "    pm.test('The message names the booking limit and the wait', function () {",
+                  "        var body = pm.response.json();",
+                  "        pm.expect(body.success).to.be.false;",
+                  "        pm.expect(body.message).to.match(/^Too many booking attempts\\. Try again in \\d+ minutes\\.$/);",
+                  "    });",
+                  "",
+                  "    pm.test('Retry-After tells the client how long to wait', function () {",
+                  "        var wait = Number(pm.response.headers.get('Retry-After'));",
+                  "        pm.expect(Number.isInteger(wait)).to.be.true;",
+                  "        pm.expect(wait).to.be.above(0);",
+                  "    });",
+                  "",
+                  "    pm.test('The standard RateLimit headers are sent and the legacy ones are not', function () {",
+                  "        pm.expect(pm.response.headers.has('RateLimit')).to.be.true;",
+                  "        pm.expect(pm.response.headers.has('RateLimit-Policy')).to.be.true;",
+                  "        pm.expect(pm.response.headers.has('X-RateLimit-Limit')).to.be.false;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "The booking limiter counts every attempt by one user, valid or not. A past date is invalid, so nothing is created. The loop stops at the first 429, or after 15 tries.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"2020-01-01T10:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{dylanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Other routes still work and the rejected bookings created nothing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The booking limiter does not block reading', function () {",
+                  "    pm.expect(pm.response.json().count).to.eql(Number(pm.environment.get('rateLimitBookingCount')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "The limiter covers POST /bookings only. The count must equal the count before the spam.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{dylanToken}}",
                   "type": "string"
                 }
               ]

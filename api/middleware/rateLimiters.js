@@ -2,7 +2,7 @@ import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { config } from '../config/env.js';
 import { fail } from '../utils/respond.js';
 
-// Build a limiter with the shared options. Each limiter adds its own key and message.
+// Give every limiter the same headers and 429 response, with a message that names the action and the wait.
 const buildLimiter = ({ windowMinutes, max }, action, extra = {}) =>
     rateLimit({
         windowMs: windowMinutes * 60 * 1000,
@@ -32,7 +32,7 @@ export const loginLimiter = buildLimiter(rateLimits.login, 'login attempts', {
 
 export const registerLimiter = buildLimiter(rateLimits.register, 'registrations');
 
-// Run this after authenticate so req.user exists. Every attempt counts, even an invalid one.
+// Key on the user id after authenticate, so one account cannot spread booking spam across IP addresses.
 export const bookingLimiter = buildLimiter(rateLimits.booking, 'booking attempts', {
     keyGenerator: (req) => req.user.id,
 });
