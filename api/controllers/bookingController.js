@@ -1,37 +1,40 @@
 import Booking from '../models/Booking.js';
+import { createBooking as bookGig } from '../services/bookingService.js';
 import { handleError, notFound } from '../utils/handleError.js';
+import { listScope, partyScope } from '../utils/ownerScope.js';
 import { ok, created } from '../utils/respond.js';
+
+// Populate names and the gig title only, so no other User field leaves the API.
+const withParties = (query) =>
+    query.populate('gig', 'title').populate('client', 'name').populate('freelancer', 'name');
 
 export const createBooking = async (req, res) => {
     try {
-        const { date, quantity, client, freelancer, service } = req.validated;
+        const result = await bookGig(req.user.id, req.validated);
 
-        const newBooking = await Booking.create({
-            date,
-            quantity,
-            client,
-            freelancer,
-            service,
-        });
+        if (!result) {
+            return notFound(res, 'Gig');
+        }
 
-        return created(res, 'Booking created', newBooking);
+        return created(res, 'Booking confirmed', result);
     } catch (error) {
         return handleError(res, error);
     }
-}
+};
 
 export const getBookings = async (req, res) => {
     try {
-        const bookings = await Booking.find({});
+        const bookings = await withParties(Booking.find(listScope(req.user)).sort({ createdAt: -1 }));
+
         return ok(res, 'Bookings retrieved', bookings, { count: bookings.length });
     } catch (error) {
         return handleError(res, error);
     }
-}
+};
 
 export const getBookingById = async (req, res) => {
     try {
-        const booking = await Booking.findById(req.params.id);
+        const booking = await withParties(Booking.findOne({ _id: req.params.id, ...partyScope(req.user) }));
 
         if (!booking) {
             return notFound(res, 'Booking');
@@ -41,38 +44,4 @@ export const getBookingById = async (req, res) => {
     } catch (error) {
         return handleError(res, error);
     }
-}
-
-export const updateBooking = async (req, res) => {
-    try {
-        const { date, quantity, client, freelancer, service } = req.validated;
-
-        const booking = await Booking.findByIdAndUpdate(
-            req.params.id,
-            { date, quantity, client, freelancer, service },
-            { returnDocument: 'after', runValidators: true }
-        );
-
-        if (!booking) {
-            return notFound(res, 'Booking');
-        }
-
-        return ok(res, 'Booking updated', booking);
-    } catch (error) {
-        return handleError(res, error);
-    }
-}
-
-export const deleteBooking = async (req, res) => {
-    try {
-        const booking = await Booking.findByIdAndDelete(req.params.id);
-
-        if (!booking) {
-            return notFound(res, 'Booking');
-        }
-
-        return ok(res, 'Booking deleted');
-    } catch (error) {
-        return handleError(res, error);
-    }
-}
+};
