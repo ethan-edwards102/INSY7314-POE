@@ -43,3 +43,4 @@
 - https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
 - https://expressjs.com/en/resources/middleware/cors.html
 - https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS
+- https://github.com/DannyDainton/newman-reporter-htmlextra

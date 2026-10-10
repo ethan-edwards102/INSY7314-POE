@@ -12,6 +12,7 @@ Supplies baseUrl and the admin credentials from .env.
 
 // Resolve the path from this file so the run works from any folder.
 const COLLECTION = fileURLToPath(new URL('../postman/HustleHub-Plus.postman_collection.json', import.meta.url));
+const REPORTS = fileURLToPath(new URL('../postman/reports/', import.meta.url));
 
 const REQUIRED = [
     ['PORT', 'the port the HTTPS server listens on, e.g. 5001'],
@@ -73,7 +74,15 @@ if (accounts !== 1) {
 newman.run(
     {
         collection: COLLECTION,
-        reporters: 'cli',
+        reporters: ['cli', 'htmlextra', 'json'],
+        reporter: {
+            htmlextra: {
+                export: `${REPORTS}newman-report.html`,
+                title: 'HustleHub+ API test run',
+                browserTitle: 'HustleHub+ API test run',
+            },
+            json: { export: `${REPORTS}newman-report.json` },
+        },
         // The development certificate is self signed.
         insecure: true,
         // Environment values override the collection defaults.
@@ -100,4 +109,5 @@ newman.run(
 
 /* ref
 https://nodejs.org/api/url.html
+https://github.com/DannyDainton/newman-reporter-htmlextra
 */
