@@ -19,3 +19,5 @@
 - https://nodejs.org/api/url.html
 - https://expressjs.com/en/guide/routing/
 - https://jestjs.io/docs/ecmascript-modules
+- https://mongoosejs.com/docs/guide.html#indexes
+- https://mongoosejs.com/docs/guide.html#timestamps
