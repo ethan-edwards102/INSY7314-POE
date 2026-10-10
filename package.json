@@ -1,0 +1,16 @@
+{
+  "name": "hustle-hub-plus-root",
+  "private": true,
+  "description": "Shortcut scripts that run the api and client folders from the repository root.",
+  "scripts": {
+    "install:all": "npm install --prefix api && npm install --prefix client",
+    "api": "npm start --prefix api",
+    "client": "npm run dev --prefix client",
+    "test:api": "npm run test:api --prefix api",
+    "test:client": "npm test --prefix client",
+    "build:client": "npm run build --prefix client"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
