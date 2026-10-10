@@ -18,4 +18,11 @@ describe('buildBrowseFilter', () => {
         expect(title.test('Weekly house cleaning')).toBe(false);
         expect(title.test('Is it 100.* off?')).toBe(true);
     });
+
+    test('writes a pattern that MongoDB accepts for a wide space', () => {
+        const { title } = buildBrowseFilter({ search: 'a\u3000b' });
+
+        expect(title.source).not.toMatch(/\\u/);
+        expect(title.test('a\u3000b')).toBe(true);
+    });
 });

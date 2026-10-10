@@ -1,4 +1,4 @@
-// Escape the search text so a character such as "." or "(" matches itself.
+// Escape only the ASCII pattern characters, because MongoDB rejects the \u escapes that RegExp.escape writes.
 export const buildBrowseFilter = ({ category, search } = {}) => {
     const filter = { isActive: true };
 
@@ -7,12 +7,12 @@ export const buildBrowseFilter = ({ category, search } = {}) => {
     }
 
     if (search) {
-        filter.title = new RegExp(RegExp.escape(search), 'i');
+        filter.title = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     }
 
     return filter;
 };
 
 /* ref
-https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/escape
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#escaping
 */
