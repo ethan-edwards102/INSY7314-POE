@@ -58,10 +58,53 @@ if (absent.length > 0) {
     process.exit(1);
 }
 
+// Read an optional positive whole number and fall back to a default when the key is absent.
+const positiveInteger = (key, fallback) => {
+    const raw = process.env[key]?.trim();
+
+    if (!raw) {
+        return fallback;
+    }
+
+    const value = Number(raw);
+
+    if (!Number.isInteger(value) || value <= 0) {
+        console.error(`${key} must be a positive whole number. It is "${raw}".`);
+        process.exit(1);
+    }
+
+    return value;
+};
+
+// Split a comma separated list into trimmed, non-empty origins.
+const origins = (process.env.CLIENT_ORIGIN?.trim() || 'https://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 // Export the config object. Other modules in the application use it.
 export const config = {
     port: process.env.PORT,
     mongoUri: process.env.MONGO_URI,
+    clientOrigins: origins,
+    rateLimits: {
+        global: {
+            windowMinutes: positiveInteger('RATE_LIMIT_GLOBAL_WINDOW_MINUTES', 15),
+            max: positiveInteger('RATE_LIMIT_GLOBAL_MAX', 300),
+        },
+        login: {
+            windowMinutes: positiveInteger('RATE_LIMIT_LOGIN_WINDOW_MINUTES', 15),
+            max: positiveInteger('RATE_LIMIT_LOGIN_MAX', 5),
+        },
+        register: {
+            windowMinutes: positiveInteger('RATE_LIMIT_REGISTER_WINDOW_MINUTES', 60),
+            max: positiveInteger('RATE_LIMIT_REGISTER_MAX', 20),
+        },
+        booking: {
+            windowMinutes: positiveInteger('RATE_LIMIT_BOOKING_WINDOW_MINUTES', 10),
+            max: positiveInteger('RATE_LIMIT_BOOKING_MAX', 10),
+        },
+    },
     ssl: {
         key: fs.readFileSync(certificate.keyPath),
         cert: fs.readFileSync(certificate.certPath),
