@@ -8559,6 +8559,11 @@
                   "    pm.expect(allowed).to.include('authorization');",
                   "    pm.expect(allowed).to.include('content-type');",
                   "    pm.expect(pm.response.headers.has('Access-Control-Allow-Credentials')).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test('The limiter counts the preflight, so a flood of OPTIONS requests can be stopped', function () {",
+                  "    pm.expect(pm.response.code).to.eql(204);",
+                  "    pm.expect(pm.response.headers.has('RateLimit')).to.be.true;",
                   "});"
                 ]
               }

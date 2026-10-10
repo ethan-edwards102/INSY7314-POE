@@ -23,8 +23,7 @@ export const loginIpLimiter = buildLimiter(rateLimits.loginIp, 'login attempts',
     skipSuccessfulRequests: true,
 });
 
-// Count failed logins only, so a correct login never uses up an attempt.
-// Include the email so one attacker cannot lock out every account behind a shared IP.
+// Key on the IP and the email, so one attacker cannot lock out every account behind a shared IP.
 export const loginLimiter = buildLimiter(rateLimits.login, 'login attempts', {
     skipSuccessfulRequests: true,
     keyGenerator: (req) => {

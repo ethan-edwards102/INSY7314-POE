@@ -17,14 +17,15 @@ const app = express();
 app.disable('x-powered-by');
 
 // Keep this order: headers, CORS, limiter, parser, sanitiser, routes, then error handlers.
-// Set the security headers first so every response carries them, including an error.
 app.use(securityHeaders);
 
-// Answer an allowed preflight here, before the limiter, so a browser check from the client uses no allowance.
 app.use(corsPolicy);
 
 // Count each request before any parsing so a flood stops before database work.
 app.use(globalLimiter);
+
+// End a preflight here, after the limiter counts it, because no route handles OPTIONS.
+app.options('/{*path}', (req, res) => res.sendStatus(204));
 
 // Limit the payload size. This stops an attacker from using a large
 // payload to exhaust server memory.

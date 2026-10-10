@@ -1,5 +1,4 @@
-// Match the origin exactly, so a look-alike host or a "*" entry never passes.
-// A request with no Origin header is not a cross origin browser call, so it passes.
+// Match the origin exactly, and let a request with no Origin header pass because it is not a browser call.
 export const isAllowedOrigin = (origin, allowedOrigins) =>
     origin === undefined || allowedOrigins.includes(origin);
 

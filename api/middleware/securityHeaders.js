@@ -20,14 +20,14 @@ export const securityHeaders = helmet({
     strictTransportSecurity: true,
 });
 
-// Send no Allow-Origin header to a disallowed origin, so the browser blocks the response.
-// Skip credentials because the token travels in the Authorization header, not a cookie.
+// Withhold Allow-Origin from a disallowed origin, and pass a preflight on so the limiter counts it.
 export const corsPolicy = cors({
     origin: (origin, callback) => callback(null, isAllowedOrigin(origin, config.clientOrigins)),
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: false,
     maxAge: 600,
+    preflightContinue: true,
 });
 
 /* ref
