@@ -1,10 +1,15 @@
 # HustleHub+
 
-**A secure freelance marketplace platform.**
+**A secure freelance marketplace.**
 
-- **Module:** INSY7314 - Information Systems 3D
-- **Part:** 1
-- **Youtube Video:** [Watch here](https://youtu.be/dxhXuTjIDsg)
+- **Module:** INSY7314, Information Systems 3D
+- **Part:** 2, Secure Stack (in progress, due 12 October 2026)
+- **Part 1 video:** [Watch here](https://youtu.be/dxhXuTjIDsg)
+- **Part 2 video:** To do
+
+> **Part 2 status.** The API is complete and all its tests pass. The React client
+> has its base set-up only. The pages, the frontend tests, the screenshots and the
+> video are still to do. [Section 11](#11-part-2-work-still-to-do) lists each open item.
 
 ---
 
@@ -14,113 +19,119 @@
 2. [Tech stack](#2-tech-stack)
 3. [Team](#3-team)
 4. [System architecture](#4-system-architecture)
-5. [Security](#5-security)
-6. [Getting started](#6-getting-started)
-7. [API reference](#7-api-reference)
-8. [Testing](#8-testing)
-9. [Coming soon](#9-coming-soon)
-10. [Demonstration](#10-demonstration)
-11. [References](#11-references)
+5. [Data model and roles](#5-data-model-and-roles)
+6. [Security](#6-security)
+7. [Getting started](#7-getting-started)
+8. [API reference](#8-api-reference)
+9. [Testing](#9-testing)
+10. [Known limits](#10-known-limits)
+11. [Part 2 work still to do](#11-part-2-work-still-to-do)
+12. [Coming in Part 3](#12-coming-in-part-3)
+13. [Demonstration](#13-demonstration)
+14. [References](#14-references)
 
 ---
 
 ## 1. About HustleHub+
 
-HustleHub+ is a secure freelance marketplace platform. Its purpose is to allow
-freelancers to advertise services, and clients to browse and book those
-services.
+HustleHub+ is a marketplace for freelance services. A Freelancer lists a
+service, called a **gig**. A Client finds a gig and books it. Each booking
+records a simulated payment, called a **transaction**. The Freelancer sees the
+income from these transactions.
 
-Beyond standard marketplace functionality, the system records the financial
-transactions generated through bookings, and gives users an indication of income
-earned and estimated tax obligations.
+The system keeps passwords, tokens and payment records. For this reason, the
+team designed security into each layer from the start.
 
-The platform processes sensitive information such as user credentials, transactional
-records, and income related data. The system is designed with that in mind and
-implemented with security as a primary concern rather than as an afterthought.
+### 1.1 The roles
 
-### The users
+Each account has one role. The API reads the role from the database on each
+request and uses it to decide what the user can do. This is role based access
+control: a role holds the permissions, and a user gets a role (National
+Institute of Standards and Technology, 2026; OWASP, n.d. b).
 
-Every account has exactly one role. The role is set at registration, travels
-inside the user's token, and is what the system uses to decide who may do what.
-This is role based access control, in which privileges are attached to roles and
-roles are assigned to users rather than granting each user permissions directly
-(National Institute of Standards and Technology, 2026; OWASP, n.d. b).
-
-| Role | Who they are | What they do |
+| Role | Who | What the role can do |
 |---|---|---|
-| **Client** | Someone who needs work done | Browses services, books them, receives invoices |
-| **Freelancer** | Someone selling a service | Advertises services with a rate, fulfils bookings, earns income |
-| **Admin** | Platform operator | Changes another account's role and oversees the platform |
+| **Client** | A person who needs work done | Browse gigs, book a gig, see their own bookings and payments |
+| **Freelancer** | A person who sells a service | Create and manage their own gigs, see bookings of their gigs, see their income |
+| **Admin** | The platform operator | See all records, remove any gig, list users, change the role of another user |
 
-**Admin cannot be self assigned.** Registration validates the requested role
-against the role list with `Admin` removed, so a request asking for `Admin` is
-rejected before any database work happens. That closes the obvious privilege
-escalation route (OWASP, 2021a), but creates a bootstrap problem: if registration refuses to
-create an Admin and only an Admin can promote anyone, no Admin could ever exist.
-The first one is therefore created outside the API entirely, by
-`npm run seed:admin`, which needs filesystem and database access rather than an
-HTTP request. Someone on the network cannot reach it.
+**A user cannot make themselves an Admin.** Registration accepts only `Client`
+and `Freelancer`. The first Admin comes from `npm run seed:admin`, which needs
+access to the server files and the database. A request over the network cannot
+run it.
 
-### In Part 1
+### 1.2 What Part 2 adds
 
-Part 1 is scoped to the **secure foundations**, as the backend must be correct and
-hardened before any interface sits on top of it.
+Part 1 built the secure base: registration, login, bcrypt, JWT, HTTPS and
+validation. Part 2 adds the marketplace and the controls around it.
 
-* Express backend with routes, controllers, models and middleware separated.
-* User registration and login, stored in MongoDB.
-* Passwords hashed with bcrypt. No plaintext password is ever stored.
-* A JWT issued on registration and login, and required on every protected route.
-* HTTPS with a locally generated certificate. There is no HTTP listener at all.
-* Validation of every request body, including nested objects and arrays.
-* Controlled errors that never leak a stack trace, file path or config value.
-* A Postman collection of 83 requests and 401 assertions.
-
-Everything in the wider brief that belongs to Parts 2 and 3 is listed in
-[Coming soon](#9-coming-soon).
+| Area | Part 2 work | Status |
+|---|---|---|
+| Gigs | A Freelancer creates, reads, updates and deletes their own gigs | **Done** |
+| Bookings | A Client books a gig. The server calculates the price | **Done** |
+| Transactions | Each booking creates one payment record that nobody can change | **Done** |
+| Income | A Freelancer sees total income and income for each month | **Done** |
+| Access control | Role checks on each write route, and ownership checks inside each query | **Done** |
+| Sanitisation | Operator keys refused, HTML stripped from free text | **Done** |
+| Rate limits | Global, login, registration and booking limits | **Done** |
+| Security headers | Helmet with a strict Content Security Policy (CSP) | **Done** |
+| CORS | An allowlist of browser origins | **Done** |
+| API documentation | An OpenAPI 3.1 document and a Scalar page at `/docs` | **Done** |
+| API tests | 81 unit tests and 1,323 Postman assertions, all pass | **Done** |
+| React client | Base set-up: Vite, React Router, Tailwind CSS, shadcn/ui, an API helper | **Done** |
+| React client | Pages for login, register, gigs, bookings, transactions and income | To do |
+| Frontend tests | Component and interaction tests, and a coverage report | To do |
+| Evidence | Screenshots and the demonstration video | To do |
 
 ---
 
 ## 2. Tech stack
 
-HustleHub+ is built on the **MERN** stack, the combination of MongoDB, Express,
-React and Node.js in which a single language spans the database, the server and
-the browser (MongoDB, Inc., n.d.; Ishaq et al., 2023). The React tier arrives
-in Part 2, so Part 1 is the M, E and N.
+HustleHub+ uses the **MERN** stack: MongoDB, Express, React and Node.js. One
+language, JavaScript, runs in the database queries, the server and the browser
+(MongoDB, Inc., n.d.; Ishaq et al., 2023).
 
-| Tier | Technology | Version | Role in the system |
+| Tier | Technology | Version | Job in the system |
 |---|---|---|---|
-| **(M)** Database | MongoDB | 8+ | Stores users, services, bookings, invoices and proofs of payment |
-| **(E)** Framework | Express | 5.3 | HTTP routing, middleware pipeline, error boundary |
-| **(R)** Frontend | React | | *Coming soon in Part 2* |
-| **(N)** Runtime | Node.js | 22+ (tested on 26) | Runs the API as a single HTTPS process |
+| **(M)** Database | MongoDB | 6+ (tested on 9) | Stores users, gigs, bookings and transactions |
+| **(E)** Framework | Express | 5.3 | Routes, middleware and the error handler (OpenJS Foundation, n.d. h, n.d. j) |
+| **(R)** Frontend | React | 19 | The browser client (in progress) |
+| **(N)** Runtime | Node.js | 22+ (tested on 26) | Runs the API as one HTTPS process (OpenJS Foundation, n.d. a) |
 
-Node.js runs the API on a single thread and handles concurrent requests through
-an event loop that offloads I/O rather than blocking on it (OpenJS Foundation,
-n.d. a, n.d. f). Express supplies the routing and middleware model that the
-security controls are built on (OpenJS Foundation, n.d. e, n.d. h).
+### 2.1 API packages
 
-### Libraries
-
-| Package | Version | Why it is used |
+| Package | Version | Why the API uses it |
 |---|---|---|
-| `mongoose` | 9.11 | Schema definitions, a second validation layer, and the bcrypt save hook |
-| `bcryptjs` | 3.0 | Password hashing. Deliberately slow and adaptive |
-| `jsonwebtoken` | 9.0 | Signs and verifies the JWT that authenticates every protected request |
-| `dotenv` | 18.0 | Loads configuration from `.env`, which is never committed |
-| `selfsigned` | 5.5 | Generates the local TLS certificate in pure JavaScript, so no `openssl` is needed |
-| `newman` | 6.2 | Runs the Postman collection from the command line |
+| `mongoose` | 9.11 | Schemas, a second validation layer and the bcrypt hook (Automattic, n.d. e) |
+| `bcryptjs` | 3.0 | Password hashing (Wirtz, n.d.) |
+| `jsonwebtoken` | 9.0 | Signs and verifies the token (Auth0, n.d.) |
+| `helmet` | 8.3 | Sets the security headers and the CSP (Hahn, n.d.) |
+| `cors` | 2.8 | Applies the browser origin allowlist (OpenJS Foundation, n.d. b) |
+| `express-rate-limit` | 8.7 | Rate limits on each sensitive route (Friedly, n.d.) |
+| `sanitize-html` | 2.18 | Removes HTML from free text (Apostrophe Technologies, n.d.) |
+| `dotenv` | 18.0 | Reads configuration from `.env` (Motte, n.d.) |
 
-Official documentation for each: Mongoose (Automattic, n.d. c), bcryptjs
-(Wirtz, n.d.), jsonwebtoken (Auth0, n.d.), dotenv (Motte, n.d.),
-selfsigned (Romaniello, n.d.) and Newman (Postman, Inc., n.d. b).
+| Development tool | Version | Why the team uses it |
+|---|---|---|
+| `jest` | 30 | Unit tests for the API (OpenJS Foundation, n.d. e) |
+| `newman` | 6.2 | Runs the Postman collection from the command line (Postman, Inc., n.d. b) |
+| `newman-reporter-htmlextra` | 1.23 | Writes the HTML test report |
+| `@scalar/express-api-reference` | 0.10 | Builds the API documentation page (Scalar, n.d.) |
+| `@scalar/api-reference` | 1.73 | Holds the browser script that the documentation page loads |
+| `selfsigned` | 5.5 | Makes the local TLS certificate without `openssl` (Romaniello, n.d.) |
+| `eslint` | 10 | Checks code style. `eqeqeq` and `curly` are errors |
 
-### Tooling
+### 2.2 Client packages
 
-| Tool | Purpose |
-|---|---|
-| Postman | The 83 request API test collection (Postman, Inc., n.d. a) |
-| MongoDB Compass | Inspecting stored documents, including the password hashes |
-| Git and GitHub | Version control and submission |
+| Package | Version | Why the client uses it |
+|---|---|---|
+| `react`, `react-dom` | 19.3 | The user interface (Meta Platforms, Inc., n.d.) |
+| `react-router-dom` | 7.18 | Page routes (Shopify, Inc., n.d.) |
+| `vite` | 8.3 | The HTTPS development server, the `/api` proxy and the build (Vite Team, n.d.) |
+| `tailwindcss` | 4.3 | Styles |
+| shadcn/ui (radix-nova) | 4 | Accessible components that the project owns (shadcn, n.d.) |
+| `vitest` | 5.0 | The frontend test runner (Vitest Team, n.d.) |
+| `@testing-library/react` | 16.3 | Tests that use the page as a person does (Testing Library, n.d.) |
 
 ---
 
@@ -139,724 +150,886 @@ selfsigned (Romaniello, n.d.) and Newman (Postman, Inc., n.d. b).
 
 ### 4.1 Architecture diagram
 
-The diagram shows the MERN tiers, the two boundaries the system defends, and
-where each security control sits. React is drawn as a Part 2 component so the
-picture accurately represents the target architecture.
+The diagram shows the tiers, the two trust boundaries and the position of each
+security control. A dashed box is Part 2 work that is still to do.
 
 ```mermaid
 flowchart TB
-    subgraph ZONE1["UNTRUSTED ZONE: outside the system boundary"]
-        PM["<b>Postman / Newman</b><br/>API test client"]
-        RE["<b>React SPA</b><br/>the R in MERN<br/><i>coming soon in Part 2</i>"]
-        AT["<b>Attacker</b><br/>forged tokens, injection payloads,<br/>oversized bodies"]
+    subgraph OUT["UNTRUSTED ZONE"]
+        BR["<b>Browser</b><br/>React client on https://localhost:5173<br/><i>pages still to do</i>"]
+        PM["<b>Postman / Newman</b><br/>192 requests"]
+        AT["<b>Attacker</b><br/>forged tokens, operator keys,<br/>script tags, floods"]
     end
 
-    TLS{{"<b>BOUNDARY 1: TLS</b><br/>HTTPS only on port 5001<br/>self signed local certificate<br/>no HTTP listener exists"}}
+    VITE["<b>Vite dev server</b><br/>HTTPS, sends /api/... to the API"]
+    BR --> VITE
 
+    TLS{{"<b>BOUNDARY 1: TLS</b><br/>HTTPS only on port 5001<br/>no HTTP listener"}}
+    VITE --> TLS
     PM --> TLS
-    RE --> TLS
     AT --> TLS
 
-    subgraph ZONE2["TRUSTED ZONE: Node.js process, the N and E in MERN"]
+    subgraph API["TRUSTED ZONE: Node.js and Express"]
         direction TB
+        CFG["<b>config/env.js</b><br/>stops startup on a missing secret,<br/>a placeholder secret, a missing certificate<br/>or a bad origin"]
 
-        CFG["<b>config/env.js</b><br/>refuses to start on a missing secret,<br/>a placeholder secret or a missing certificate"]
-        SRV["<b>server.js</b><br/>https.createServer"]
-        APP["<b>app.js</b><br/>express.json limit 10kb"]
-
-        subgraph GUARD["BOUNDARY 2: per request security middleware"]
+        subgraph GLOBAL["Global middleware, in this order"]
             direction TB
-            AUTH["<b>authenticate</b><br/>verifies the JWT signature and expiry"]
-            ROLE["<b>requireRole</b><br/>checks the role from the token"]
-            VAL["<b>validateBody</b><br/>allowlist rules, blocks operator injection,<br/>writes the clean req.validated"]
-            AUTH --> ROLE --> VAL
+            HEL["<b>Helmet</b><br/>CSP default-src 'none', HSTS,<br/>X-Frame-Options DENY"]
+            COR["<b>CORS</b><br/>allowlist from CLIENT_ORIGIN"]
+            GLM["<b>Global rate limit</b><br/>300 requests in 15 minutes"]
+            JSN["<b>express.json</b><br/>10 kB body limit"]
+            SAN["<b>sanitizeRequest</b><br/>refuses $ keys, dotted keys<br/>and deep nesting"]
+            HEL --> COR --> GLM --> JSN --> SAN
         end
 
-        CTRL["<b>Controllers</b><br/>read req.validated, never req.body"]
-        MOD["<b>Models</b><br/>Mongoose schemas, bcrypt hook,<br/>password hidden from queries and JSON"]
-        ERR["<b>Error boundary</b><br/>full detail to the server console,<br/>a safe generic message to the client"]
+        subgraph ROUTE["BOUNDARY 2: route middleware"]
+            direction TB
+            AUTH["<b>authenticate</b><br/>verifies the HS256 token,<br/>reads the current role from MongoDB"]
+            RL["<b>Route rate limits</b><br/>login, register, booking"]
+            ROLE["<b>requireRole</b><br/>403 for a wrong role"]
+            VAL["<b>validateObjectId, validateBody,<br/>validateQuery</b><br/>allowlist rules, strip HTML,<br/>build req.validated"]
+            AUTH --> RL --> ROLE --> VAL
+        end
 
-        CFG --> SRV --> APP --> GUARD
+        CTRL["<b>Controllers and services</b><br/>owner id inside each query,<br/>server sets owner, price and amount"]
+        MOD["<b>Models</b><br/>schema rules, bcrypt hook,<br/>append only Transaction"]
+        ERR["<b>Error handler</b><br/>full detail to the server log,<br/>a safe message to the client"]
+
+        CFG --> GLOBAL --> ROUTE
         VAL --> CTRL --> MOD
-        APP -.->|"bad JSON, oversized body"| ERR
-        AUTH -.->|"401"| ERR
-        ROLE -.->|"403"| ERR
-        MOD -.->|"schema or index violation"| ERR
+        CTRL -.->|"unexpected error"| ERR
+        MOD -.->|"schema or index error"| ERR
     end
 
     TLS ==> CFG
 
-    subgraph ZONE3["DATA ZONE: MongoDB, the M in MERN"]
-        DB[("<b>hustle_hub_plus</b><br/>bcrypt hashes only, never plaintext<br/>unique index on email")]
+    subgraph DATA["DATA ZONE: MongoDB"]
+        DB[("<b>hustle_hub_plus</b><br/>users, gigs, bookings, transactions<br/>sanitizeFilter on every query")]
     end
 
-    MOD <==>|"Mongoose driver"| DB
-    ERR ==>|"safe JSON envelope"| TLS
+    MOD <==> DB
+    ERR ==>|"JSON envelope"| TLS
+
+    classDef todo stroke-dasharray: 5 5
+    class BR todo
 ```
 
-A request crosses **Boundary 1** by arriving over TLS, which is the only way in.
-It then crosses **Boundary 2**, where it must prove who it is (`authenticate`),
-prove it is allowed (`requireRole`), and prove its body is well formed
-(`validateBody`), in that order. Only a request that survives all three reaches a
-controller. Anything that fails goes to the single error boundary, which decides
-what the outside world is told.
+A request enters only through TLS, at **Boundary 1**. The global middleware then
+checks it before any route sees it. At **Boundary 2**, a protected route checks
+the token, the rate limit, the role and the input, in that order. Only a
+request that passes each check reaches a controller. Each check that fails
+answers at once, in the same JSON envelope from `utils/respond.js`. An
+unexpected error goes to one error handler, which logs the detail and sends a
+safe message.
 
-### 4.2 Backend structure
+### 4.2 Folder structure
 
 ```
 INSY7314-POE/
 |
-+-- api/                       The Express backend
-|   +-- server.js              HTTPS server, Mongo connection
-|   +-- app.js                 Express app, body limit, routers, error boundary
-|   +-- config/env.js          Startup validation of .env and the certificate
-|   |
-|   +-- routes/                URL to middleware chain to controller
-|   +-- middleware/            authenticate, authorize, validation, error handling
-|   +-- controllers/           One request each: read input, call model, respond
-|   +-- models/                Mongoose schemas, constraints, password hashing
-|   +-- utils/                 Response envelope, token signing, validation rules
-|   |
-|   +-- postman/               The 83 request test collection and its environment
-|   +-- screenshots/           API response screenshots used in this README
-|   +-- scripts/               certs, seed:admin, db:reset, test:api
-|   |
-|   +-- .env.example           Template of every variable, committed, no real values
-|   +-- .env                   Real secrets and connection string      NOT COMMITTED
-|   +-- certs/                 localhost-key.pem, localhost-cert.pem   NOT COMMITTED
-|   +-- node_modules/          Installed by npm install                NOT COMMITTED
-|   +-- package.json           Dependencies and the npm run scripts
-|   +-- package-lock.json      Exact dependency versions, committed on purpose
++-- api/                         The Express API
+|   +-- server.js                Connects to MongoDB, builds indexes, starts HTTPS
+|   +-- app.js                   Global middleware, route table, error handlers
+|   +-- config/env.js            Checks .env and the certificate at startup
+|   +-- routes/                  One router for each resource, and index.js as the table
+|   +-- middleware/              authenticate, authorize, validation, sanitiser,
+|   |                            rate limits, security headers, docs policy, errors
+|   +-- controllers/             One function for each request
+|   +-- services/                Booking and income logic
+|   +-- models/                  User, Gig, Booking, Transaction
+|   +-- utils/                   Response envelope, tokens, validators, owner scope
+|   +-- openapi/                 The OpenAPI document that /docs shows
+|   +-- __tests__/               Jest unit tests
+|   +-- postman/                 The collection, the environment, reports/ (not committed)
+|   +-- scripts/                 certs, seed:admin, db:reset, test:api
+|   +-- screenshots/             Part 1 screenshots
+|   +-- .env.example             Every setting with a safe value (committed)
+|   +-- .env, certs/             Secrets and the TLS key                NOT COMMITTED
 |
-+-- client/                    The React frontend (Part 2), with its own screenshots/
-+-- package.json               Shortcut scripts that run api/ and client/ from the root
-+-- .gitignore                 Keeps .env, certs/ and node_modules/ out of the repo
++-- client/                      The React client (Vite)
+|   +-- src/services/api.js      The apiRequest helper and the token in sessionStorage
+|   +-- src/pages/               Pages (home page only at this time)
+|   +-- src/components/ui/       shadcn/ui components
+|   +-- src/__tests__/           Vitest and React Testing Library tests
+|   +-- vite.config.js           HTTPS, the /api proxy and the test set-up
+|
++-- package.json                 Scripts that run both apps from the root
++-- references.md                Every source link in the code
 ```
 
-Each directory is one layer with one responsibility, so that a change to
-validation, storage or transport touches one place rather than being spread
-across the codebase. That decomposition by responsibility, rather than by step in
-the request, is the modularity criterion Parnas set out (Parnas, 1972), and the
-split between the model and the controller follows the original Model View
-Controller description (Reenskaug, 1979). The API itself is organised as REST
-resources addressed by URL and acted on with HTTP methods (Fielding, 2000).
+Each folder has one job. A change to validation, storage or transport touches
+one folder only. This follows the modularity rule of Parnas (1972). The API
+uses REST resources: a URL names a resource and an HTTP method acts on it
+(Fielding, 2000).
 
-The three entries marked **NOT COMMITTED** are excluded by `.gitignore` because
-each one is a secret or is rebuildable. A fresh clone therefore has none of them,
-and [Getting started](#6-getting-started) is what creates all three: `npm install`
-for `node_modules/`, `npm run certs` for `certs/`, and a copy of `.env.example`
-for `.env`.
-
-| Layer | Responsibility | Deliberately does **not** |
+| Layer | Job | Does **not** |
 |---|---|---|
-| `config/` | Validate environment values at startup | Contain a secret itself |
-| `server.js`, `app.js` | Create the HTTPS server, mount routers | Contain business logic |
-| `routes/` | Declare the middleware chain for a URL | Touch the database |
-| `middleware/` | Authenticate, authorise, validate, handle errors | Know about a specific resource |
-| `controllers/` | Orchestrate one request | Re-validate, or build JSON by hand |
-| `models/` | Schema, constraints, password hashing | Know that HTTP exists |
-| `utils/` | Shared envelope, tokens, validation primitives | Hold request state |
+| `config/` | Check the settings at startup | Hold a secret |
+| `app.js` | Put the middleware in order and mount the routers | Hold business logic |
+| `routes/` | Name the middleware chain for each URL | Touch the database |
+| `middleware/` | Authenticate, authorise, validate, sanitise, limit | Know about one resource |
+| `controllers/` | Handle one request | Read `req.body` or build JSON by hand |
+| `services/` | Booking and income rules that need more than one model | Know that HTTP exists |
+| `models/` | Schemas, indexes, hooks | Know that HTTP exists |
+| `utils/` | Shared helpers | Keep request state |
 
-The useful property of this split is that **security is not scattered**. Every
-protected route is guarded by one line, `router.use(authenticate)`, and there is
-exactly one place where a token is verified, one where an error becomes a client
-response, and one where a response is built. Each can be reviewed in a single
-file, and a mistake cannot hide in a forgotten controller.
-
-### 4.3 Request flow
+### 4.3 Request flow: a booking
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant U as Client
-    participant T as TLS
-    participant V as Validation
+    participant C as Client
     participant A as authenticate
-    participant C as Controller
-    participant M as User model
+    participant L as bookingLimiter
+    participant R as requireRole
+    participant V as validateBody
+    participant S as bookingService
     participant D as MongoDB
 
-    Note over U,D: 1. Register
-    U->>T: POST /auth/register over HTTPS
-    T->>V: decrypted request, body capped at 10kb
-    V->>V: check name, email, password, role
-    alt any field invalid
-        V-->>U: 400 Validation failed, every bad field at once
+    C->>A: POST /bookings with Bearer token
+    A->>A: verify the HS256 signature and the expiry
+    A->>D: read the current role of the user
+    alt no token, bad token or deleted user
+        A-->>C: 401
     end
-    V->>C: req.validated, only the declared fields
-    C->>M: create the user
-    M->>M: schema validates the PLAINTEXT password
-    M->>M: pre-save hook replaces it with a bcrypt hash, cost 12
-    M->>D: insert
-    alt email already registered
-        D-->>U: 409, caught by the unique index
+    A->>L: count the attempt for this user id
+    alt more than 10 in 10 minutes
+        L-->>C: 429 Too many booking attempts
     end
-    C-->>U: 201 + user + JWT
-
-    Note over U,D: 2. Log in
-    U->>T: POST /auth/login
-    T->>C: email and password
-    C->>D: find the user, explicitly asking for the hash
-    C->>M: bcrypt compares the candidate against the stored hash
-    alt no such user OR wrong password
-        C-->>U: 401 Invalid email or password, identical for both
+    L->>R: is the role Client?
+    alt Freelancer or Admin
+        R-->>C: 403
     end
-    C-->>U: 200 + user + JWT
-
-    Note over U,D: 3. Use the token
-    U->>A: GET /services with Authorization Bearer header
-    A->>A: verify the signature and the expiry
-    alt header missing
-        A-->>U: 401 Authentication required
-    else signature forged
-        A-->>U: 401 Invalid token
-    else expired
-        A-->>U: 401 Token has expired
+    R->>V: gig id, scheduledFor, quantity
+    alt a field is bad
+        V-->>C: 400 with every bad field
     end
-    A->>C: req.user is now id and role, taken from the verified token
-    alt role not permitted for this route
-        C-->>U: 403 You do not have permission to perform this action
+    V->>S: req.validated
+    S->>D: find the gig: active, not owned by the caller
+    S->>D: check that the owner is still a Freelancer
+    alt no such gig
+        S-->>C: 404 Gig not found
     end
-    C->>D: query
-    C-->>U: 200 + data
+    S->>D: create the booking, rate copied, total in cents
+    S->>D: create the transaction for the total
+    alt the transaction fails
+        S->>D: delete the booking
+        S-->>C: 500, no booking without a payment
+    end
+    S-->>C: 201 Booking confirmed, with the booking and the transaction
 ```
 
-Note the deliberate split between the two refusals. **401 means the system does
-not know who you are.** **403 means it knows exactly who you are and the answer
-is still no.** That is the distinction HTTP itself draws between `401
-Unauthorized` and `403 Forbidden` (Fielding, Nottingham and Reschke, 2022).
+**401 means that the API does not know who you are. 403 means that the API
+knows who you are, and the answer is still no.** HTTP gives these two codes
+these meanings (Fielding, Nottingham and Reschke, 2022).
 
 ---
 
-## 5. Security
+## 5. Data model and roles
 
-This section explains what each control is, why it was chosen, and what would go
-wrong without it. Every claim is enforced by code in this repository and asserted
-by the Postman suite. The controls are grouped around the risks named in the
-OWASP Top 10 (OWASP, 2021a, 2021b, 2021c, 2021d, 2021e), and the requirements
-they satisfy are the verifiable ones set out in the OWASP Application Security
-Verification Standard (OWASP, 2025).
+### 5.1 Data model
 
-### 5.1 Password hashing
+```mermaid
+erDiagram
+    USER ||--o{ GIG : "owns (Freelancer)"
+    USER ||--o{ BOOKING : "makes (Client)"
+    USER ||--o{ BOOKING : "receives (Freelancer)"
+    GIG ||--o{ BOOKING : "is booked by"
+    BOOKING ||--|| TRANSACTION : "creates"
 
-**bcrypt at a cost factor of 12, applied in a Mongoose pre-save hook.**
+    USER {
+        ObjectId _id
+        string name
+        string email "unique, lower case"
+        string password "bcrypt hash, select false"
+        string role "Client, Freelancer or Admin"
+    }
+    GIG {
+        ObjectId freelancer "set from the token"
+        string title "3 to 80 characters, HTML removed"
+        string description "10 to 1000 characters, HTML removed"
+        string category "one of 8 categories"
+        number rate "0.01 to 100000, whole cents"
+        string rateType "Once, Hour or Day"
+        boolean isActive
+        boolean removedByAdmin "hidden from queries"
+    }
+    BOOKING {
+        ObjectId gig
+        ObjectId client "set from the token"
+        ObjectId freelancer "copied from the gig"
+        date scheduledFor "future, at most 365 days ahead"
+        number quantity "1 to 100, whole number"
+        number unitRate "copied from the gig"
+        string rateType "copied from the gig"
+        number total "calculated by the server"
+        string status "Confirmed or Cancelled"
+    }
+    TRANSACTION {
+        ObjectId booking "unique"
+        ObjectId client
+        ObjectId freelancer
+        number amount "the booking total"
+        string currency "ZAR"
+        string status "Completed"
+        string reference "HH- and 16 random hex characters, unique"
+    }
+```
+
+The gig categories are `HouseCleaning`, `DogGrooming`, `Gardening`, `Tutoring`,
+`Plumbing`, `Electrical`, `Moving` and `Photography`.
+
+**Why a booking copies the rate.** A booking is a financial record. It must show
+the price on the day of the booking. If the Freelancer changes the gig rate
+later, the old booking does not change.
+
+**Indexes.** Each list query has an index, so the database does not scan the
+full collection. Some indexes also enforce a rule:
+
+| Collection | Index | Purpose |
+|---|---|---|
+| users | `email`, unique | One account for each email |
+| gigs | `isActive, category, createdAt` | The browse list |
+| gigs | `freelancer, createdAt` | The "my gigs" list |
+| bookings | `client, createdAt` and `freelancer, createdAt` | The booking lists |
+| bookings | `gig` | The check for bookings before a gig delete |
+| bookings | `client, gig, scheduledFor`, unique for `Confirmed` only | Stops a double booking when a client sends the same request again (MongoDB, Inc., 2026a) |
+| transactions | `booking`, unique | One transaction for each booking |
+| transactions | `reference`, unique | One reference for each transaction |
+| transactions | `freelancer, createdAt` and `client, createdAt` | The lists and the income total |
+
+The server builds every index before it accepts the first request.
+
+### 5.2 Access rules (RBAC matrix)
+
+"Own" means that the record belongs to the caller. For a record of another
+user, the API answers **404**, not 403. A 403 would tell an attacker that the
+record exists (OWASP, 2023a).
+
+| Action | Route | Client | Freelancer | Admin |
+|---|---|:---:|:---:|:---:|
+| Register | `POST /auth/register` | Public | Public | Seed script only |
+| Log in | `POST /auth/login` | Public | Public | Public |
+| Read own profile | `GET /auth/me` | Yes | Yes | Yes |
+| Browse active gigs | `GET /gigs` | Yes | Yes | Yes |
+| Read one gig | `GET /gigs/:id` | Active only | Active, or own | Yes, also inactive |
+| List own gigs | `GET /gigs/mine` | 403 | Own | 403 |
+| Create a gig | `POST /gigs` | 403 | Yes | 403 |
+| Update a gig | `PUT /gigs/:id` | 403 | Own | 403 |
+| Delete a gig | `DELETE /gigs/:id` | 403 | Own | Any |
+| Book a gig | `POST /bookings` | Yes, not own gig | 403 | 403 |
+| List bookings | `GET /bookings` | Own | Of own gigs | All |
+| Read one booking | `GET /bookings/:id` | Own | Of own gigs | Yes |
+| List transactions | `GET /transactions` | Own | Of own gigs | All |
+| Read one transaction | `GET /transactions/:id` | Own | Of own gigs | Yes |
+| Read income | `GET /income/me` | 403 | Own | 403 |
+| List users | `GET /users` | 403 | 403 | Yes |
+| Change a role | `PATCH /users/:id/role` | 403 | 403 | Yes, not own |
+| Change or delete a booking or a transaction | No route | 404 | 404 | 404 |
+
+---
+
+## 6. Security
+
+This section tells what each control does, why the team chose it, and what
+goes wrong without it. Code in this repository enforces each control. A test
+proves each control. The controls follow the OWASP Top 10 (OWASP, 2021a, 2021b,
+2021c, 2021d, 2021e) and the OWASP API Security Top 10 (OWASP, 2023a, 2023b,
+2023c, 2023d).
+
+### 6.1 Password hashing
+
+**bcrypt with a cost of 12, in a Mongoose pre-save hook.**
 
 ```js
 // models/User.js
 const SALT_ROUNDS = 12
 
 userSchema.pre('save', async function () {
-    if (!this.isModified('password')) return
+    if (!this.isModified('password')) {
+        return
+    }
+
     this.password = await bcrypt.hash(this.password, SALT_ROUNDS)
 })
 ```
 
-**Why hash rather than encrypt.** Encryption is reversible by design. If the
-platform can decrypt a password then so can anyone who obtains the key, and the
-key has to live somewhere the server can reach. Hashing is one way, so a stolen
-database yields no passwords. The system never needs the original back; it only
-needs to answer "is this the same password". Stored authentication secrets are
-required to be salted and hashed with a one way key derivation function rather
-than kept in a recoverable form (Grassi et al., 2017), and `bcrypt.compare`
-answers the question by
-re-hashing the candidate with the salt stored inside the hash (OWASP, n.d. j).
+- **Hash, not encryption.** A hash is one way. A stolen database gives no
+  passwords. Login uses `bcrypt.compare`, which hashes the attempt with the
+  stored salt (Grassi et al., 2017; OWASP, n.d. k).
+- **bcrypt, not SHA-256.** A fast hash lets an attacker try billions of
+  guesses each second. bcrypt is slow on purpose. The cost is in the hash, so
+  the team can increase it later (Provos and Mazières, 1999).
+- **Cost 12.** Cost 12 means 4,096 rounds. A login takes about a quarter of a
+  second, but each guess costs an attacker the same time (OWASP, n.d. k).
+- **A hook, not the controller.** The hook runs on each save, from each code
+  path (Automattic, n.d. a). No path can store a plain text password.
+- **Validation first.** Mongoose validates before the hook runs. The password
+  rule checks the plain text, before the hash replaces it.
+- **8 to 72 characters.** bcrypt ignores bytes after 72, so the API refuses a
+  longer password (Wirtz, n.d.). A password needs an uppercase letter, a
+  lowercase letter, a number and a symbol. The API does not trim a password.
 
-**Why bcrypt and not SHA-256 or MD5.** General purpose hashes are built to be
-fast, which is the wrong property here. A modern GPU computes billions of
-SHA-256 hashes per second, which turns a stolen database into a solved one. Fast
-general purpose hashes are unsuitable for password storage for exactly this
-reason, because they let an attacker make a very large number of guesses cheaply
-(OWASP, n.d. j).
-bcrypt is deliberately slow and, importantly, **adaptive**: the cost factor is
-stored in the hash itself, so it can be raised as hardware improves without
-invalidating existing passwords (Provos and Mazières, 1999). It also salts per user automatically, so two
-people who choose the same password get different hashes and rainbow tables are
-useless.
+Three barriers keep the hash inside the server:
 
-**Why cost 12.** The cost is a base 2 exponent, so 12 means 4096 rounds
-(kelektiv, n.d.). It is a
-trade between login speed and cracking cost. Cost 10 is the library default and
-is now considered low; cost 14 is noticeably slow for a user. Twelve costs about
-a quarter of a second, which nobody notices, while multiplying an attacker's cost
-across billions of guesses (OWASP, n.d. j).
-
-**Why a hook rather than the controller.** The hook is Mongoose `pre('save')`
-middleware, which runs before every document save regardless of the code path
-that triggered it (Automattic, n.d. a). If the controller hashed, every future
-path that writes a user (a seed script, a password reset, a data import) would
-have to remember to do it, and one forgetful path stores plaintext. In the model
-hook it is structurally impossible to save a user without hashing first.
-
-**Why validation runs first.** Mongoose validates before the save hook, so the
-password complexity rule is checked while the password is still readable. Once
-hashed, every password looks like a 60 character bcrypt string and no strength
-rule could be applied.
-
-**Three barriers stop the hash leaking:**
-
-| Barrier | Mechanism | What it stops |
+| Barrier | How | What it stops |
 |---|---|---|
-| Query | `select: false` on the field, overridden per query with `.select()` (Automattic, n.d. b) | A stray `find()` returns no password at all |
-| Opt in | Login must ask with `.select('+password')` | Retrieving the hash is a visible, deliberate act |
-| Serialisation | `toJSON` deletes `password` | A document carrying the hash still cannot be sent to a client |
+| Query | `select: false` on the field (Automattic, n.d. d) | A normal `find()` returns no hash |
+| Opt in | Login asks for `.select('+password')` | Each read of the hash is on purpose |
+| Output | `toJSON` deletes `password` | A document with the hash still cannot go to a client |
 
-**Other choices.** Passwords are never trimmed, because a leading space is a real
-character and removing it would store something different from what the user
-chose. The 8 to 72 character range exists because bcrypt silently truncates past
-72 bytes, so allowing more would give false confidence (Wirtz, n.d.). Complexity requires an
-uppercase letter, a lowercase letter, a number and a symbol.
+### 6.2 Tokens and authentication
 
-**Evidence.** Stored passwords are bcrypt hashes only. The `$2b$12$` prefix
-records the algorithm and the cost:
+**An HS256 JSON Web Token (JWT) that holds the user id and the role.**
 
-```
-Admin       admin@hustlehub.local          $2b$12$8fBd7yhb9KkEdg98vEKiUeclSC1fgRiReYS0KERMaSbwkEhoScZ9u
-Freelancer  ethan.edwards@hustlehub.test   $2b$12$kZIOZH8JxtjgQmY31MKjye2XP1y5klj5ruSmYLlxq5ZRe0bDFCGeO
-```
-
-### 5.2 Token based authentication
-
-**A stateless HS256 JSON Web Token carrying the user id and role, issued on
-registration and login, and verified on every protected request.**
-
-A JWT is three base64url segments, a header, a payload of claims and a signature,
-joined by dots (Jones, Bradley and Sakimura, 2015). It is presented to protected
-routes in the `Authorization` header using the `Bearer` scheme (Jones and Hardt,
-2012).
+A JWT has a header, a payload and a signature (Jones, Bradley and Sakimura,
+2015). The client sends it in the `Authorization` header as `Bearer <token>`
+(Jones and Hardt, 2012).
 
 ```js
-// utils/token.js
-const payload = { id: user._id.toString(), role: user.role };
-return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+// utils/token.js, shortened
+jwt.sign({ id, role }, process.env.JWT_SECRET, { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN });
+jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 ```
 
-A real issued token, decoded:
+- **The signature stops a forged token.** Anyone can read the payload, but a
+  change to the payload breaks the signature. Only the server has the secret.
+  The Postman test "A forged Admin token is refused" proves this.
+- **The algorithm is fixed to HS256.** The verifier refuses a token that names a
+  different algorithm, such as `none` or `HS512` (Sheffer, Hardt and Jones,
+  2020; OWASP, n.d. h). A Jest test proves this.
+- **The token expires.** `.env.example` sets a life of 1 hour (`JWT_EXPIRES_IN`). The
+  token is stateless, so expiry limits the damage from a stolen token.
+- **The secret is safe.** `JWT_SECRET` comes from `.env`, which git ignores. The
+  API does not start if the secret is missing or is the `GENERATE_ME`
+  placeholder (Wiggins, 2017; MITRE, 2026h).
 
-```
-header   { "alg": "HS256", "typ": "JWT" }
-payload  { "id": "6a91e48284e36fb40ec00de6", "role": "Freelancer",
-           "iat": 1787946115, "exp": 1787949715 }
-signature  HMAC-SHA256 over header.payload using JWT_SECRET
-```
-
-**Why tokens rather than sessions.** HTTP is stateless, so after login the server
-needs a way to recognise the caller. A session table costs a database lookup on
-every request and holds state that must be replicated if the service is ever
-scaled or containerised. A signed token moves that state to the client. The
-server keeps only the secret, and verification is a local computation with no
-database round trip (Jones, Bradley and Sakimura, 2015).
-
-**Why the token cannot simply be edited.** This is the question the whole design
-turns on. A JWT is not encrypted: anyone can decode the payload and read
-`"role": "Freelancer"`. But the third segment is an HMAC-SHA256 signature over
-the first two, computed with `JWT_SECRET`. Changing `Freelancer` to `Admin`
-changes the payload, which invalidates the signature, and verification throws.
-Producing a matching signature requires the secret, which never leaves the
-server. The verifier is also pinned to the expected algorithm, because accepting
-whatever the header asks for is what enables the `alg: none` and algorithm
-confusion attacks (Sheffer, Hardt and Jones, 2020; OWASP, n.d. g). The suite proves this with **"A forged Admin token is refused"**, which
-rewrites the role claim in a valid token and receives `401 Invalid token`.
-
-**Why `id` and `role` and nothing else.** That is the minimum needed to make an
-authorisation decision without a database lookup. The payload is readable by
-anyone holding the token, so it carries no name, no email and above all no
-password hash.
-
-**Why it expires.** One hour by default, carried in the registered `exp` claim
-and checked at verification (Jones, Bradley and Sakimura, 2015; Auth0, n.d.). Because the token is stateless there is
-no server side record to delete, so a stolen token stays valid until it expires.
-Expiry is therefore the only thing between a leak and indefinite access, which is
-why the window is short. Statelessness costs immediate revocation, and that trade
-is made deliberately.
-
-**Protecting the secret.** `JWT_SECRET` is read from the environment and never
-committed. The application refuses to start if it is missing or still the
-`GENERATE_ME` placeholder, and prints the command to generate a real one. A weak
-or shared secret would let anyone who guesses it mint valid Admin tokens, which
-is the worst failure available in this design, so it is checked before the server
-accepts its first request. Keeping the signing key in the environment rather than
-in the source is what allows the repository to be published without exposing it
-(Wiggins, 2017), and a key hardcoded into the code would be a catalogued weakness
-in its own right (MITRE, 2026f; OWASP, n.d. l).
-
-**How routes are protected.** Each resource router applies one line:
+**New in Part 2: the role comes from the database.** In Part 1, the role came
+from the token. A demoted Admin kept their power until the token expired. Now
+`authenticate` reads the current role from MongoDB on each request:
 
 ```js
-router.use(authenticate);   // everything below requires a valid JWT
-```
+// middleware/authenticate.js
+const user = await User.findById(payload.id).select('role').lean();
 
-Applying it at the router means an endpoint added later is protected by default,
-which is the least privilege default that authorisation guidance asks for
-(OWASP, n.d. b). Missing or inconsistent checks of this kind are the top
-ranked risk in the OWASP Top 10 (OWASP, 2021a).
-Leaving a route unprotected requires actively moving it out, which is visible in
-review, rather than merely forgetting a line, which is not.
-
-### 5.3 Input validation
-
-**Allowlist validation in middleware, ahead of every controller, with the body
-rebuilt from the rule table.**
-
-Validation is positive: it defines exactly what is permitted rather than trying
-to enumerate what is dangerous, because a denylist of bad characters is the
-common mistake and is always incomplete (OWASP, n.d. f; OWASP, 2021c).
-Failing to validate input properly is itself a catalogued weakness (MITRE,
-2026a), and injection flaws arise precisely when unvalidated data reaches an
-interpreter (OWASP, n.d. e).
-
-Two properties make this stronger than a typical field check.
-
-**The body is rebuilt, not just inspected.** After validating, a fresh object is
-constructed containing only the declared fields, and controllers read
-`req.validated`, never `req.body`. An attacker who adds an extra field, whether
-`"isAdmin": true` or a field some future schema might recognise, finds it
-discarded rather than passed to the database. Binding request fields straight
-onto a stored object is mass assignment, ranked in its own right in the OWASP API
-Security Top 10 (OWASP, 2023). Because it works for fields that do
-not exist yet, the defence is structural rather than a list of things to
-reject (OWASP, n.d. i; MITRE, 2026g). Asserted by **"Unexpected fields are ignored"** and, for nested
-documents, **"Reject unknown fields inside an embedded document"**.
-
-**Strict type checks block operator injection.** MongoDB queries are objects, not
-strings, so the classic `' OR 1=1--` does not apply. The equivalent attack sends
-an object where a string is expected:
-
-```json
-{ "email": { "$ne": null }, "password": { "$ne": null } }
-```
-
-Passed to a query, that means "find any user whose email is not null", which
-matches the first account and logs the attacker in without a password. `$ne` and
-`$gt` are ordinary MongoDB query operators, so the payload is valid to the query
-engine and only the type check keeps it out (MongoDB, Inc., 2026a). The guard
-is one explicit check:
-
-```js
-if (typeof value !== 'string') {
-    return { field, message: `${label} must be text` };
+if (!user) {
+    return fail(res, 401, 'Invalid token');
 }
+
+req.user = { id: payload.id, role: user.role };
 ```
 
-Numbers are checked the same way, which also rejects `"250"` and `{ "$gt": 0 }`.
-Because the check is on the primitive type rather than a blacklist of operator
-names, it blocks every operator, including ones added in future MongoDB
-versions (MITRE, 2026h; MongoDB, Inc., 2026a). Asserted by **"NoSQL operator injection is rejected"**.
+- A role change applies on the next request of that user.
+- A deleted user gets 401 at once.
+- The API refuses a token whose `id` is not a 24 character hex string, before
+  any query runs. A signed payload cannot carry a query operator.
 
-**Why middleware rather than the controller.** Validation runs first, so an
-invalid request never opens a database connection. It also keeps controllers
-uniform: by the time one runs, its input is known to be good.
+The Postman folder "Current user and role changes" proves this. The Admin
+demotes Ethan to Client. Ethan's old token then gets 403 on `/income/me`. After
+the Admin restores the role, the same token works again.
 
-**Why every error is reported at once.** The checkers return an error rather than
-throwing, so the middleware collects the full list. A user submitting an empty
-form is told about all the missing fields in one response instead of discovering
-them one at a time:
+**Each resource router, except `/auth`, starts with one line:**
+
+```js
+router.use(authenticate);
+```
+
+A route that a developer adds later is protected by default (OWASP, n.d. b).
+The `/users` router also applies `requireRole('Admin')` in the same way. The
+`/auth` router has public routes, so it adds `authenticate` to `/auth/me` only.
+Of the API routes, only `GET /health`, `POST /auth/register` and
+`POST /auth/login` are public. A Jest test checks that the OpenAPI document
+marks only these three as public.
+
+### 6.3 Access control and ownership
+
+Broken access control is the first risk in the OWASP Top 10 (OWASP, 2021a). The
+API checks access at two levels.
+
+**Level 1: the role.** `requireRole` stops a role that can never do the action,
+with 403 (OWASP, 2023d).
+
+```js
+router.post('/', requireRole('Freelancer'), validateBody(GIG_RULES), gigController.createGig);
+router.delete('/:id', requireRole('Freelancer', 'Admin'), validateObjectId, gigController.deleteGig);
+```
+
+**Level 2: the owner, inside the query.** The owner id is part of the database
+filter. A record of another user does not match, so the API answers 404
+(OWASP, 2023a; MITRE, 2026f).
+
+```js
+// controllers/gigController.js: a Freelancer updates only their own gig
+Gig.findOneAndUpdate(
+    { _id: req.params.id, freelancer: req.user.id, removedByAdmin: mongoose.trusted({ $ne: true }) },
+    req.validated,
+    { returnDocument: 'after', runValidators: true }
+);
+
+// utils/ownerScope.js: a Client sees their side, a Freelancer sees their side
+{ $or: [{ client: user.id }, { freelancer: user.id }] }
+```
+
+A check after the query would read the record first. A check inside the query
+never loads a record that the caller cannot see.
+
+**The server sets each sensitive value.** A request body cannot set an owner, a
+price or an amount (OWASP, 2023b; OWASP, n.d. j):
+
+| Value | Where it comes from |
+|---|---|
+| `gig.freelancer` | The token |
+| `booking.client` | The token |
+| `booking.freelancer` | The gig |
+| `booking.unitRate`, `booking.rateType` | The gig |
+| `booking.total` | `computeTotal(rate, quantity)`, in whole cents |
+| `transaction.amount` | The booking total |
+| `transaction.reference` | `crypto.randomBytes` |
+
+The Postman test "An owner id in the body is ignored" proves this.
+
+**Other business rules:**
+
+- A Client cannot book their own gig, an inactive gig, or a gig whose owner is
+  no longer a Freelancer.
+- A gig with bookings is made inactive, not deleted, because its bookings and
+  transactions point to it.
+- When the Admin removes a booked gig, the owner cannot turn it on again.
+- An Admin cannot change their own role, so the platform always keeps an Admin.
+
+### 6.4 Input validation
+
+**Allowlist rules in middleware, before each controller.**
+
+Each route has a rule table. The middleware checks each field, then builds
+`req.validated` from the table only. Controllers read `req.validated`, never
+`req.body` (OWASP, n.d. g; MITRE, 2026a).
+
+```js
+// utils/validators.js
+export const BOOKING_RULES = {
+    gig: { field: 'gig', label: 'Gig', type: 'objectId' },
+    scheduledFor: { field: 'scheduledFor', label: 'Scheduled date', type: 'date', future: true, maxDaysAhead: 365 },
+    quantity: { field: 'quantity', label: 'Quantity', type: 'number', min: 1, max: MAX_QUANTITY, integer: true, required: false },
+};
+```
+
+| Checker | What it refuses |
+|---|---|
+| `checkString` | A value that is not a string, such as `{ "$ne": null }`. A value outside the allowed list, the length or the pattern |
+| `checkNumber` | A string such as `"250"`, an object, a value outside the range, a fraction for a whole number, more than 2 decimals for money |
+| `checkDate` | A value that is not a date, a past date, a date more than 365 days ahead |
+| `checkObjectId` | A value that is not 24 hex characters |
+| `checkBoolean` | The string `"false"`, because a non-empty string counts as true |
+
+- **The type check stops operator injection.** MongoDB queries are objects.
+  The payload `{ "email": { "$ne": null } }` matches any user. The API refuses
+  each value that is not the expected type (MongoDB, Inc., 2026b; MITRE, 2026j).
+- **Undeclared fields are dropped.** A field such as `"role": "Admin"` on a gig
+  never reaches the database. This stops mass assignment (OWASP, 2023b; MITRE, 2026i).
+- **The API reports every bad field at once.** The client can show all errors
+  together.
+- **Each `:id` is checked first.** `validateObjectId` accepts exactly 24 hex
+  characters and answers 400 before any query. `mongoose.isValidObjectId`
+  also accepts any 12 character string, so the API does not use it.
+- **The query string is checked too.** `GET /gigs` accepts only a known
+  `category` and a `search` of 50 characters or fewer. The search text is
+  escaped before it becomes a pattern, so `.*(` is plain text.
+- **The Mongoose schema is a second layer.** It enforces `required`, `enum`,
+  `min`, `max` and `match`. Updates use `runValidators: true` (Automattic, n.d. f).
+- **The body limit is 10 kB.** A larger body gets 413 (OpenJS Foundation, n.d. d).
 
 ```json
 {
   "success": false,
   "message": "Validation failed",
   "errors": [
-    { "field": "name",     "message": "Name is required" },
-    { "field": "email",    "message": "Email is required" },
-    { "field": "password", "message": "Password must be 8-72 characters and include an uppercase letter, a lowercase letter, a number and a symbol" }
+    { "field": "scheduledFor", "message": "Scheduled date must be in the future" },
+    { "field": "quantity", "message": "Quantity must be a whole number" }
   ]
 }
 ```
 
-**Nested validation.** Rule tables compose, so a booking validates its embedded
-client, freelancer and service, and errors report a full path:
+### 6.5 Sanitisation
+
+Validation decides if a value has the right shape. Sanitisation stops values
+that try to change a query or a page. The API has four layers.
+
+**Layer 1: refuse dangerous keys.** `sanitizeRequest` runs on each request
+before the routes. It walks the body and the query string. It refuses a key that
+starts with `$`, a key that contains a `.`, and a bracket key such as
+`category[$ne]`. It answers 400 and names each bad key. It does not remove the
+key and continue, because a silent change hides the attack (OWASP, n.d. g).
 
 ```json
-{ "field": "service.category", "message": "Category must be one of: HouseCleaning, DogGrooming" }
-```
-
-**Why the patterns are allowlists.** The name pattern permits letters, spaces,
-hyphens and apostrophes and nothing else, so `<script>alert(1)</script>` is
-refused as a name rather than escaped and stored. Unneutralised input reaching
-generated page output is cross-site scripting (MITRE, 2026b; Mozilla, 2025), and
-the patterns are kept simple and anchored so that validation cannot itself become
-a denial of service through catastrophic backtracking (OWASP, n.d. k). Storing hostile content and
-hoping every future consumer escapes it correctly is the pattern that produces
-stored cross-site scripting, and it leaves the defence resting on every consumer
-getting context aware output encoding right (OWASP, n.d. c); refusing it at
-the boundary means the value never
-enters the system (OWASP, n.d. f). Asserted by **"Script tag in name is rejected"**.
-
-**Two layers.** Request validation is the first line and gives good messages
-early. The Mongoose schema is the second and enforces `required`, `enum`, `min`
-and `match`, with `runValidators: true` on updates so they are checked as
-strictly as creates (Automattic, n.d. d). The schema exists so that no write path, including a
-future script, can bypass the rules. MongoDB can enforce a third layer at the
-collection itself if the schema is ever bypassed entirely (MongoDB, Inc.,
-2026b).
-
-**Non body input.** URL parameters are validated by the ObjectId cast, and the
-resulting error becomes a clean `400` rather than a 500. Request size is capped
-at 10kb through the `limit` option on `express.json()`, whose own default is
-100kb, so an oversized body cannot exhaust server memory (OpenJS Foundation, n.d. c).
-
-### 5.4 Why HTTPS matters
-
-**HTTPS only, with a locally generated certificate. There is no HTTP listener.**
-
-Every request this API handles carries something worth stealing. `POST
-/auth/login` carries a plaintext password. Every request after it carries a
-bearer token, and a bearer token is exactly what the name says: whoever holds it
-is treated as the user. Over plain HTTP all of that is readable by anyone
-positioned in between, such as a compromised router, another device on the same
-public Wi-Fi, or an ISP. Failing to encrypt data in transit is ranked second in
-the OWASP Top 10 (OWASP, 2021b). TLS provides three things at once (Rescorla, 2018; Mozilla, 2026b):
-
-| Property | What it gives | What it prevents |
-|---|---|---|
-| Confidentiality | The traffic is encrypted | Interception of passwords and tokens |
-| Integrity | Tampering is detected | Rewriting a booking amount in transit |
-| Authentication | The server proves its identity | A fake server harvesting credentials |
-
-**Why there is no HTTP fallback.** A convenience HTTP listener would undo the
-protection, because a client can be induced to use it and a single plaintext
-request leaks the token for everything that follows. The application binds only
-an HTTPS socket through the Node.js `https` module, so there is nothing to
-downgrade to (OpenJS Foundation, n.d. d). That is stronger than a redirect,
-which still requires one plaintext round trip, and stronger than relying on HSTS,
-which only takes effect after a browser has already made one successful HTTPS
-visit (Hodges, Jackson and Barth, 2012; Mozilla, 2026a). The negotiated protocol
-and cipher suites follow current TLS configuration guidance (McKay and Cooper,
-2019; OWASP, n.d. m).
-
-**What self signed does and does not mean.** Trust in a TLS certificate normally
-comes from a chain that validates back to an authority the client already trusts
-(Cooper et al., 2008). No certificate authority will vouch for `localhost`, so a
-development certificate is signed by the project itself, which is the case Node.js
-reports as a self signed certificate in the chain (OpenJS Foundation, n.d. g).
-Browsers therefore warn that the connection is "not private". That warning is
-about the *authentication* property only. Confidentiality and integrity are
-unaffected and the traffic is genuinely encrypted. In deployment the certificate
-is replaced by a CA issued one and no application code changes, because the trust
-decision lives in the certificate rather than the server.
-
-**Why `npm run certs` uses a library.** The obvious instruction is
-`openssl req -x509 ...`, but `openssl` is absent from a default Windows install
-and differs across versions. The script uses the `selfsigned` package instead, so
-certificate generation is one command that behaves identically everywhere
-(Romaniello, n.d.). The
-certificate lists both `localhost` and `127.0.0.1`, because modern clients read
-the address from that extension.
-
-**Why the certificate is not committed.** A TLS private key is the secret that
-proves the server's identity, so anyone holding it can impersonate the server.
-`certs/`, `*.pem` and `*.key` are gitignored and each developer generates their
-own.
-
-### 5.5 Controlled error handling
-
-**Full detail to the server console, a safe generic message to the client, in
-one shape, from one place.**
-
-Express by default returns the stack trace as an HTML page unless `NODE_ENV` is
-set to production (OpenJS Foundation, n.d. b). A stack trace tells an attacker
-the framework and version, absolute filesystem paths, internal module names and
-often the shape of the failing query. That is free reconnaissance, and an error
-message carrying that kind of internal detail is a catalogued weakness (MITRE,
-2026d) as well as a named form of security misconfiguration (OWASP, 2021d). The
-correct shape is the one used here: a generic response to the caller, the full
-detail logged server side (OWASP, n.d. d). This
-API never emits one (OpenJS Foundation, n.d. b; MITRE, 2026d).
-
-| Error | Response | Reasoning |
-|---|---|---|
-| Schema validation | `400` with a per field `errors` array | The user can fix this, and it describes only their own input |
-| Bad ObjectId | `400 Invalid value supplied for '_id'` | Names the parameter without revealing the schema |
-| Duplicate key | `409 An account with that email already exists` | The conflict is meaningful and actionable |
-| Malformed JSON | `400 Request body is not valid JSON` | Raised before any route runs, and still caught |
-| Body over 10kb | `413 Request body is too large` | Explicit rather than a connection reset |
-| No route matched | `404 Route not found` as JSON | Never Express's HTML default page |
-| **Anything else** | `500 An unexpected error occurred`, logged in full server side | An unrecognised error is exactly the kind whose message is most likely to contain internal detail |
-
-That last row is the important one. The rule is **describe only what was
-recognised**, and everything else is generic. Each status code is used with the
-meaning HTTP defines for it (Fielding, Nottingham and Reschke, 2022).
-
-**What reaches the log.** The server side record carries the stack and the
-failing operation, never the request credentials. Passwords, tokens, connection
-strings and keys are excluded from log output by design (OWASP, n.d. h), since
-a log holding them becomes a second, less protected copy of the secret (MITRE,
-2026e). Logging of authentication attempts is not part of Part 1 and is
-scheduled for Part 3, since unlogged security events are their own Top 10
-category (OWASP, 2021e).
-
-**Account enumeration is closed.** Login returns the identical
-`401 Invalid email or password` whether the email is unregistered or the password
-is wrong. Distinguishing them would turn login into a free membership oracle. A response
-that differs between a bad username and a bad password is an observable response
-discrepancy and is what makes account enumeration possible (MITRE, 2026c), so the
-guidance is a single generic failure message (OWASP, n.d. a). Both conditions
-are evaluated in one expression:
-
-```js
-if (!user || !(await user.comparePassword(password))) {
-    return fail(res, 401, 'Invalid email or password');
+{
+  "success": false,
+  "message": "Request contains a forbidden key",
+  "errors": [{ "field": "body.$where", "message": "This key is not allowed" }]
 }
 ```
 
-**This is tested, not just claimed.** Every one of the 83 requests is checked by
-a collection level test that the response is JSON rather than an HTML error page,
-and that the body contains none of `node_modules`, the repository path,
-`at JSON.parse` or `MongoServerError`. That is 166 assertions dedicated purely to
-proving nothing leaks.
+It also refuses a body nested more than 20 levels deep, so a crafted body cannot
+use all the stack.
 
-### 5.6 Other decisions
+**Layer 2: Mongoose `sanitizeFilter`.** `server.js` turns on
+`mongoose.set('sanitizeFilter', true)`. Mongoose then wraps each operator
+object that reaches a query filter in `$eq`, so the operator becomes a plain
+value (Automattic, n.d. b). The server marks its own operators with
+`mongoose.trusted()`.
 
-**Uniqueness is enforced by the database, not a check then write.** The obvious
-approach queries for the email then inserts if absent, which contains a race:
-two simultaneous registrations can both pass the check before either writes. The
-code does not query at all. It relies on the unique index, which MongoDB enforces
-atomically, and translates the duplicate key error into a `409`
-(MongoDB, Inc., 2026c).
+**Layer 3: strip HTML from free text.** The gig title and description are free
+text. `sanitize-html` removes every tag and attribute (Apostrophe
+Technologies, n.d.). The API strips again after it decodes `&lt;` and `&gt;`, so
+encoded markup cannot become a live tag. It stops after 4 rounds and refuses
+the text if it still changes. The length rules apply to the stripped text.
 
-**Emails are normalised.** Trimmed and lowercased in validation and again in the
-schema, so `TYREECE.S@HUSTLEHUB.TEST` and `tyreece.s@hustlehub.test` are the same
-account. Without this, case variation would create duplicates the unique index
-could not see.
+| Input title | Result |
+|---|---|
+| `<b>Deep</b> clean` | Stored as `Deep clean` |
+| `Fix taps & pipes <2h` | Stored as typed |
+| `&lt;script&gt;alert(1)&lt;/script&gt;Clean` | Stored as `Clean` |
+| `<script>alert(1)</script>` | 400, because nothing is left |
 
-**The application refuses to start if misconfigured.** Startup validates all six
-required values, reports every missing one at once, rejects the placeholder
-secret, and confirms the certificate files exist. A security control that fails
-silently is worse than no control, because it looks like it is working.
+**Layer 4: allowlist patterns.** A name accepts only letters, spaces, hyphens
+and apostrophes. A script tag in a name gets 400. Stored script is the base of
+stored cross-site scripting (Mozilla, n.d. c; MITRE, 2026b; OWASP, n.d. d). The
+patterns are short and anchored, so they cannot cause a slow regular
+expression (OWASP, n.d. l).
 
-**Secrets never enter the repository.** Configuration that varies between
-deployments, and every credential in it, is read from the environment rather than
-committed, so the codebase could be made public at any moment without exposing a
-secret (Wiggins, 2017; OWASP, n.d. l). `.env`, `certs/`, `*.pem` and `*.key`
-are gitignored, and `.env.example` documents every key with a safe placeholder. The
-Postman collection stores no values at all: it declares no variables, and every
-token and id its tests capture at run time is written to the environment rather
-than back into the collection. A collection that held them would carry live JWTs
-into its own export file the moment anyone ran it and shared the result. The
-committed environment ships with `adminPassword` blank and marked secret, so the
-value is filled in locally and never committed.
+React also escapes text when it renders, so the client adds one more layer.
 
-### 5.7 Summary
+### 6.6 Rate limiting
+
+**`express-rate-limit` on every route, with stricter limits on login,
+registration and booking.**
+
+Without a limit, an attacker can guess passwords, create many accounts or fill
+the database with bookings (OWASP, 2023c; MITRE, 2026g).
+
+| Limiter | Routes | Key | Default | Counts |
+|---|---|---|---|---|
+| Global | All, also preflight | IP address | 300 in 15 minutes | Every request |
+| Login, per account | `POST /auth/login` | IP address and email | 5 in 15 minutes | Failed logins only |
+| Login, per IP | `POST /auth/login` | IP address | 20 in 15 minutes | Failed logins only |
+| Registration | `POST /auth/register` | IP address | 20 in 60 minutes | Every attempt |
+| Booking | `POST /bookings` | User id | 10 in 10 minutes | Every attempt |
+
+- **Two login limits.** The per account limit stops a guess attack on one
+  account. The per IP limit stops password spraying, where an attacker tries
+  one password on many accounts (OWASP, n.d. a).
+- **A good login does not count.** `skipSuccessfulRequests` means that a user
+  who types the right password is not locked out.
+- **The key includes the email.** One attacker on a shared IP address cannot
+  lock every user out.
+- **The booking key is the user id.** One account cannot spread spam across IP
+  addresses.
+- **A clear 429.** Each limit answers in the standard envelope, for example
+  `Too many login attempts. Try again in 15 minutes.` The `RateLimit` and
+  `RateLimit-Policy` headers tell the client the limit (Friedly, n.d.).
+- **Each limit is a setting.** The `RATE_LIMIT_*` values in `.env` change a
+  limit without a code change. The API refuses a value that is not a positive
+  whole number.
+
+The Postman folder "Rate limits" proves each limit. It runs last, so the
+blocked state does not change other tests.
+
+### 6.7 Security headers and the Content Security Policy
+
+**Helmet sets the headers on every response. The CSP allows nothing, because
+the API sends JSON only.**
+
+```js
+// middleware/securityHeaders.js
+helmet({
+    contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+            defaultSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+            baseUri: ["'none'"],
+            formAction: ["'none'"],
+        },
+    },
+    xFrameOptions: { action: 'deny' },
+    crossOriginResourcePolicy: { policy: 'same-site' },
+    strictTransportSecurity: true,
+});
+```
+
+| Header | Value | What it stops |
+|---|---|---|
+| `Content-Security-Policy` | `default-src 'none';frame-ancestors 'none';base-uri 'none';form-action 'none'` | A response that runs a script, loads a file or shows in a frame (Mozilla, n.d. a) |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | A browser that goes back to HTTP (Hodges, Jackson and Barth, 2012; Mozilla, n.d. d) |
+| `X-Frame-Options` | `DENY` | Clickjacking in an old browser |
+| `X-Content-Type-Options` | `nosniff` | A browser that guesses a JSON response is a script |
+| `Cross-Origin-Resource-Policy` | `same-site` | Another site that embeds a response |
+| `Cross-Origin-Opener-Policy` | `same-origin` | Another window that keeps a link to the page |
+| `Referrer-Policy` | `no-referrer` | A URL that leaks to another site |
+| `X-Powered-By` | Not sent | A free hint about the framework |
+
+The team removed the Helmet default CSP, because it allows scripts and styles
+from the same origin. A JSON API needs neither (Hahn, n.d.; OWASP, n.d. f). A
+collection level Postman test checks the CSP, `X-Content-Type-Options`,
+`X-Frame-Options` and `X-Powered-By` on all 192 responses.
+
+**The one exception is the `/docs` page.** The page must run a script, so it
+gets its own policy:
+
+```
+default-src 'none';script-src 'nonce-<random>';style-src 'self' 'unsafe-inline';img-src 'self' data:;
+connect-src 'self';base-uri 'none';form-action 'none';frame-ancestors 'none'
+```
+
+The real header is one line. It is on two lines here so that it fits the page.
+
+- The server makes a new random nonce for each page. A script runs only if it
+  has this nonce (Mozilla, n.d. a; OWASP, n.d. c).
+- The Scalar script comes from `node_modules`, not from a CDN.
+- `connect-src 'self'` lets the page call this API only. The page turns off the
+  Scalar telemetry, fonts, AI agent and MCP features.
+- Scalar adds some `<style>` tags and style attributes with no nonce, so the
+  policy allows inline styles. Styles cannot run code. `img-src` and the
+  `'none'` default for fonts stop CSS from sending data to another host.
+- The page is off when `NODE_ENV=production` (OpenJS Foundation, n.d. g).
+- The Scalar packages are development tools. If an install leaves them out,
+  the API starts without the page and logs one warning.
+
+**The client CSP is still to do.** The production build needs its own policy.
+See [section 11](#11-part-2-work-still-to-do).
+
+### 6.8 CORS
+
+**Only the origins in `CLIENT_ORIGIN` get permission to read a response.**
+
+A browser blocks a page on one origin from reading a response from another
+origin, unless the server allows it (Mozilla, n.d. b).
+
+- The default allowlist is `https://localhost:5173`, the Vite server.
+- The match is exact. `https://localhost:5173.evil.test` does not match.
+- At startup, the API refuses an origin that is not `https`. It also refuses an
+  origin with a path or a trailing slash, because such a value never matches.
+- `credentials: false`. The token goes in a header, not a cookie, so the API
+  needs no cookies.
+- A request with no `Origin` header, such as Postman or `curl`, is not a browser
+  request, so CORS does not apply to it. It still needs a token.
+
+In development, the browser calls `/api/...` on the Vite server, and Vite sends
+the call to the API (Vite Team, n.d.). The browser then sees one origin and one
+certificate.
+
+### 6.9 HTTPS
+
+**HTTPS only. There is no HTTP listener.**
+
+Each login carries a password, and each later request carries a token. Over
+plain HTTP, any device on the path can read both (OWASP, 2021b). TLS encrypts
+the traffic, detects changes and proves the server identity (Rescorla, 2018;
+Mozilla, n.d. e).
+
+- The API opens one HTTPS socket and no HTTP socket (OpenJS Foundation, n.d. f).
+- The Vite server uses the same certificate, so the client is HTTPS too.
+- `npm run certs` makes a self signed certificate for `localhost` and
+  `127.0.0.1`. A browser warns about it, because no authority signed it. The
+  traffic is still encrypted (OpenJS Foundation, n.d. i).
+- The private key is in `certs/`, which git ignores.
+
+### 6.10 Error handling
+
+**Full detail goes to the server log. A safe message goes to the client.**
+
+A stack trace shows file paths, module names and query shapes. This helps an
+attacker (MITRE, 2026d; OWASP, 2021d). Without its own handler, Express can send
+the stack trace as an HTML page (OpenJS Foundation, n.d. c). The API sends no stack trace, path or
+driver error (OWASP, n.d. e).
+
+| Error | Status | Message |
+|---|---|---|
+| Field validation | 400 | `Validation failed`, with `errors` |
+| Bad `:id` | 400 | `Invalid id` |
+| Markup that does not strip clean | 400 | `Title contains markup that cannot be stored` |
+| Admin changes own role | 400 | `You cannot change your own role` |
+| Forbidden key | 400 | `Request contains a forbidden key` |
+| Deep nesting | 400 | `Request is nested too deeply` |
+| Bad JSON | 400 | `Request body is not valid JSON` |
+| Other unreadable body, such as a bad charset | 4xx from the parser | `Request body could not be read` |
+| Missing or bad token | 401 | `Authentication required`, `Invalid token` or `Token has expired` |
+| Wrong role | 403 | `You do not have permission to perform this action` |
+| No record, or another user's record | 404 | `Gig not found`, `Booking not found` and so on |
+| No route | 404 | `Route not found` |
+| Duplicate email | 409 | `An account with that email already exists` |
+| Duplicate booking | 409 | `You already booked this gig for that time` |
+| Other duplicate | 409 | `That record already exists` |
+| Body over 10 kB | 413 | `Request body is too large` |
+| Rate limit | 429 | `Too many ... Try again in N minutes.` |
+| Any other error | 500 | `An unexpected error occurred` |
+
+- **One message for a failed login.** An unknown email and a wrong password get
+  the same `Invalid email or password`. Two messages would let an attacker
+  find accounts (MITRE, 2026c; OWASP, n.d. a).
+- **The log holds no secret.** The log never holds a password, a token or a
+  full auth request body (OWASP, n.d. i; MITRE, 2026e).
+- **A test proves it.** A collection level Postman test checks each response.
+  The body must be JSON, and it must not contain `node_modules`, the project
+  path, `at JSON.parse` or `MongoServerError`.
+
+### 6.11 Payment records
+
+A transaction is a financial record, so nobody can change or delete it.
+
+- **No route.** The API has no route to create, change or delete a
+  transaction. Postman proves that each attempt gets 404.
+- **The model blocks it too.** Pre hooks on the Transaction model throw on each
+  update and delete query. A save of a stored transaction also throws
+  (Automattic, n.d. a). A future script cannot change a record by mistake.
+- **A booking and its payment stay together.** A standalone MongoDB server has
+  no multi document transaction (MongoDB, Inc., 2026c). If the transaction insert
+  fails, the service deletes the booking. If the insert worked and only the
+  reply failed, the service keeps both.
+- **The total has no rounding drift.** `computeTotal` multiplies in whole
+  cents. The income total rounds to whole cents too.
+
+### 6.12 Frontend security (in progress)
+
+| Control | Status |
+|---|---|
+| The client calls the API through the HTTPS `/api` proxy | Done |
+| The token is in `sessionStorage`, as in the module manual, so it ends when the tab closes (Mozilla, n.d. f) | Done |
+| `apiRequest` removes a token that the API refuses with 401 | Done |
+| `apiRequest` shows a generic message when the server cannot be reached, not a raw error | Done |
+| No CDN fonts or scripts. The Geist font comes from `@fontsource-variable/geist` | Done |
+| Protected routes and role based routes | To do |
+| Client side validation that matches the API rules | To do |
+| A CSP for the production build | To do |
+
+### 6.13 Summary
 
 | Threat | Control | Test that proves it |
 |---|---|---|
-| Credential theft from a stolen database | bcrypt cost 12, salted per user | Hash inspection, see 5.1 |
-| Password hash leaking through the API | `select: false` plus `toJSON` transform | Global check on all 83 responses |
-| Privilege escalation at registration | `Admin` removed from the self service roles | Admin role cannot be self assigned |
-| Privilege escalation by token forgery | Signature verification | A forged Admin token is refused |
-| Unauthorised access to data | `authenticate` on every resource router | Folder 4, five requests |
-| Unauthorised role change | `requireRole('Admin')` | A Client cannot change a role |
-| NoSQL operator injection | Strict type checks | NoSQL operator injection is rejected |
-| Mass assignment | Body rebuilt from the rule table | Unexpected fields are ignored |
-| Stored cross-site scripting | Allowlist patterns reject markup | Script tag in name is rejected |
-| Interception of passwords and tokens | HTTPS only, no HTTP listener | The whole suite runs over `https://` |
-| Information disclosure via errors | Single error boundary | 166 no-leak assertions |
-| Account enumeration | Identical login failure message | Wrong password / unknown account |
-| Duplicate accounts via a race | Atomic unique index | Duplicate email is rejected |
-| Memory exhaustion | 10kb body limit | Oversized body is rejected |
+| Stolen password database | bcrypt cost 12 | Hash check, see 6.1 |
+| Hash in a response | `select: false` and `toJSON` | Registration and login tests |
+| Self assigned Admin | `Admin` not allowed at registration | "Admin role cannot be self assigned" |
+| Forged token | HS256 signature, fixed algorithm | "A forged Admin token is refused", Jest |
+| Stale role in a token | Role read from the database | "The old token of a demoted user loses Freelancer access" |
+| Wrong role | `requireRole` | "A Client cannot create a gig" and others |
+| Another user's record | Owner id inside the query | "Another Client cannot read the booking" and others |
+| Client sets the price | Server calculates the total | "Create a gig that needs rounding", Jest `computeTotal` |
+| Mass assignment | `req.validated` from the rule table | "An owner id in the body is ignored" |
+| NoSQL operator injection | Type checks, key filter, `sanitizeFilter` | "A key named $where is refused" and others |
+| Stored XSS | HTML stripping, name pattern | "HTML in a gig is stored as plain text" |
+| Password guessing and spraying | Two login limits | "Failed logins spread over many emails are blocked" |
+| Booking spam | Booking limit, unique booking index | "Repeated booking attempts are blocked" |
+| Script in a response | CSP `default-src 'none'` | Collection level header test |
+| Clickjacking | `frame-ancestors 'none'`, `X-Frame-Options` | Collection level header test |
+| Read from another origin | CORS allowlist | "Preflight from another origin gets no permission" |
+| Network sniffing | HTTPS only, HSTS | "Strict Transport Security is sent" |
+| Information leak in errors | One error handler | Collection level no-leak test |
+| Changed payment record | No route, model hooks | "A transaction cannot be edited", Jest |
+| Undocumented route | OpenAPI test | Jest "documents every route that the API serves" |
 
 ---
 
-## 6. Getting started
+## 7. Getting started
 
-Every instruction works identically on Windows, macOS and Linux. Nothing needs
-`openssl`, shell specific quoting, or an absolute path.
+Each step works on Windows, macOS and Linux. No step needs `openssl`.
 
-### 6.1 Prerequisites
+### 7.1 Prerequisites
 
-| Requirement | Version | Check with |
+| Item | Version | Check |
 |---|---|---|
 | Node.js | 22 or newer | `node --version` |
 | npm | 10 or newer | `npm --version` |
 | MongoDB Community Server | 6 or newer | `mongod --version` |
-| Postman | any recent | optional, `npm run test:api` runs the suite without it |
+| Postman | Any recent version | Optional. `npm run test:api` runs the tests without it |
 
-**Starting MongoDB:**
+**Start MongoDB:**
 
 | OS | Start | Stop |
 |---|---|---|
+| Windows | It runs as a service after the MSI install. Otherwise, `net start MongoDB` | `net stop MongoDB` |
 | macOS (Homebrew) | `brew services start mongodb-community` | `brew services stop mongodb-community` |
-| Windows | Runs as a service after the MSI install, otherwise `net start MongoDB` | `net stop MongoDB` |
 | Linux (systemd) | `sudo systemctl start mongod` | `sudo systemctl stop mongod` |
 
-### 6.2 Install
+### 7.2 Install
 
 ```bash
 git clone https://github.com/ethan-edwards102/INSY7314-POE.git
-cd INSY7314-POE/api
-npm install
+cd INSY7314-POE
+npm run install:all
 ```
 
-The backend lives in `api/`. Run every command in this section and in
-[Testing](#8-testing) from inside `api/`.
+`install:all` installs the packages in `api/` and in `client/`.
 
-### 6.3 Configure
+### 7.3 Configure the API
 
-Copy the template. `.env` is gitignored and never committed.
+Copy the template. Git ignores `.env`.
+
+On macOS and Linux:
 
 ```bash
-cp .env.example .env               # macOS and Linux
-copy .env.example .env             # Windows
+cd api
+cp .env.example .env
 ```
 
-Generate a real `JWT_SECRET` and paste it into `.env`. The server refuses to
-start while the placeholder is in place.
+On Windows:
+
+```bash
+cd api
+copy .env.example .env
+```
+
+Make a secret and put it in `JWT_SECRET`. The API does not start with the
+placeholder.
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-Set `ADMIN_PASSWORD` to a value that meets the password rules: 8 to 72
-characters with an uppercase letter, a lowercase letter, a number and a symbol.
+Set `ADMIN_PASSWORD` to a password with 8 to 72 characters, an uppercase
+letter, a lowercase letter, a number and a symbol.
 
 | Key | Purpose | Default |
 |---|---|---|
-| `PORT` | Port the HTTPS server listens on | `5001` |
-| `MONGO_URI` | MongoDB connection string | `mongodb://127.0.0.1:27017/hustle_hub_plus` |
-| `SSL_KEY_PATH` | TLS private key | `./certs/localhost-key.pem` |
-| `SSL_CERT_PATH` | TLS certificate | `./certs/localhost-cert.pem` |
-| `JWT_SECRET` | Signs and verifies tokens | **must be replaced** |
-| `JWT_EXPIRES_IN` | Token lifetime | `1h` |
-| `ADMIN_NAME` | Seeded Admin display name | `Site Admin` |
-| `ADMIN_EMAIL` | Seeded Admin login | `admin@hustlehub.local` |
-| `ADMIN_PASSWORD` | Seeded Admin password | **must be replaced** |
+| `PORT` | The port of the HTTPS server | `5001` |
+| `MONGO_URI` | The MongoDB connection string | `mongodb://127.0.0.1:27017/hustle_hub_plus` |
+| `SSL_KEY_PATH` | The TLS private key | `./certs/localhost-key.pem` |
+| `SSL_CERT_PATH` | The TLS certificate | `./certs/localhost-cert.pem` |
+| `JWT_SECRET` | Signs and verifies tokens | **Replace it** |
+| `JWT_EXPIRES_IN` | The life of a token | `1h` |
+| `ADMIN_NAME` | The name of the seeded Admin | `Site Admin` |
+| `ADMIN_EMAIL` | The email of the seeded Admin | `admin@hustlehub.local` |
+| `ADMIN_PASSWORD` | The password of the seeded Admin | **Replace it** |
+| `CLIENT_ORIGIN` | Optional. The browser origins that CORS allows, with commas between them | `https://localhost:5173` |
+| `NODE_ENV` | Optional. `production` turns off `/docs` | Not set |
+| `RATE_LIMIT_*` | Optional. The window and the maximum of each limit in [6.6](#66-rate-limiting) | See `.env.example` |
 
+### 7.4 Make the certificate
 
-### 6.4 Generate the certificate
-
-Run once. The files are gitignored, so every developer generates their own.
+Do this one time, in `api/`. The client uses the same files.
 
 ```bash
 npm run certs
 ```
 
-```
-Private key written to ./certs/localhost-key.pem
-Certificate written to ./certs/localhost-cert.pem
-Valid for 365 days. These files are ignored by git and must not be committed.
-```
+### 7.5 Seed the first Admin
 
-### 6.5 Seed the first Admin
-
-Registration refuses the `Admin` role, so the first Admin is created out of band.
-This also empties the database, which is the state the test suite expects.
+Registration refuses the `Admin` role, so a script makes the first Admin. This
+command also empties the database, which is the state that the tests need.
 
 ```bash
 npm run db:reset
 ```
 
-```
-Dropped hustle_hub_plus.
-  users: 5 removed
-Created Admin admin@hustlehub.local.
-```
+To add the Admin and keep the data, use `npm run seed:admin`.
 
-To seed without dropping anything, run `npm run seed:admin` on its own.
+### 7.6 Run the API and the client
 
-### 6.6 Run
+Use two terminals, from the repository root.
 
 ```bash
-npm start
+# terminal 1
+npm run api
 ```
 
 ```
@@ -864,364 +1037,317 @@ Connected to MongoDB
 Server started on https://localhost:5001
 ```
 
-Stop it with **Ctrl-C**. Verify it works:
-
 ```bash
-curl -k -X POST https://localhost:5001/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Tyreece S","email":"tyreece.s@hustlehub.test","password":"Tyreece!Pass1"}'
+# terminal 2
+npm run client
 ```
 
-`-k` skips certificate verification, which is needed because the development
-certificate is self signed. A `201` with a token means the stack works end to
-end. The Postman collection carries the same allowance in its own settings, so it
-runs against the development certificate without any change to Postman itself.
+| Address | What it shows |
+|---|---|
+| https://localhost:5173 | The React client. The home page shows if the API is online |
+| https://localhost:5001/docs | The API documentation, with a "Test Request" button |
+| https://localhost:5001/health | `{"success":true,"message":"OK"}` |
 
-### 6.7 Scripts
+Your browser warns about the self signed certificate. Accept the warning for
+`localhost`. To check the API from a terminal, use `curl -k`, which accepts the
+local certificate:
+
+```bash
+curl -k https://localhost:5001/health
+```
+
+### 7.7 Scripts
+
+**From the root:**
 
 | Command | What it does |
 |---|---|
-| `npm start` | Starts the HTTPS API |
-| `npm run certs` | Generates the self signed development certificate |
-| `npm run seed:admin` | Creates or promotes the Admin account |
-| `npm run db:reset` | Drops the database and reseeds the Admin |
-| `npm run test:api` | Runs all 83 requests through Newman |
+| `npm run install:all` | Installs the packages in `api/` and `client/` |
+| `npm run api` | Starts the HTTPS API |
+| `npm run client` | Starts the Vite server |
+| `npm run build:client` | Builds the client for production |
+| `npm run lint` | Runs ESLint in both apps |
+| `npm run audit` | Runs `npm audit --omit=dev` in both apps |
+| `npm run test:unit` | Runs the Jest tests in `api/` |
+| `npm run test:client` | Runs the Vitest tests in `client/` |
+| `npm run test:api` | Runs the Postman collection with Newman. The API must run on a reset database |
+| `npm run test:all` | Lint, Jest, Vitest and `npm audit` for both apps. No server needed |
 
-### 6.8 Troubleshooting
+**From `api/`:** `npm run certs`, `npm run seed:admin`, `npm run db:reset`,
+`npm run test:coverage`.
 
-| Symptom | Fix |
+**From `client/`:** `npm run test:coverage`, `npm run preview`.
+
+### 7.8 Troubleshooting
+
+| Problem | Fix |
 |---|---|
-| `Missing required configuration in .env` | The message names every missing key and what it is for |
-| `JWT_SECRET is still set to the .env.example placeholder` | Run the `randomBytes` command in 6.3 |
-| `TLS certificate not found` | `npm run certs` |
-| `MongooseServerSelectionError` | MongoDB is not running, see the table in 6.1 |
-| `Browser or Postman warns "not private"` | Expected, the certificate is self signed. Proceed, or disable SSL verification |
-| `Postman skips every request` | The environment is not selected, or `adminPassword` is blank. The console names the missing variable |
-| `The database holds N accounts, and the suite expects only the seeded Admin` | `npm run db:reset` |
+| `Missing required configuration in .env` | The message names each missing key. Add it |
+| `JWT_SECRET is still set to the .env.example placeholder` | Run the command in 7.3 |
+| `TLS certificate not found` | Run `npm run certs` in `api/` |
+| `CLIENT_ORIGIN must hold https origins` | Use an `https` origin with no path and no trailing slash |
+| `... must be a positive whole number` | Fix the `RATE_LIMIT_*` value that the message names |
+| `MongooseServerSelectionError` | Start MongoDB. See 7.1 |
+| The browser says "not private" | Expected. The certificate is self signed |
+| `429 Too many ...` | Wait for the window to end, or restart the API. The counts are in memory |
+| `The database holds N accounts` before Newman | Run `npm run db:reset` |
+| Postman skips every request | Select the environment and fill in `adminPassword` |
 
 ---
 
-## 7. API reference
+## 8. API reference
 
-Base URL `https://localhost:5001`. All bodies are JSON. Protected routes need the
-header `Authorization: Bearer <token>`.
+**The full reference is at `https://localhost:5001/docs`.** It shows each route,
+each field rule, the main status codes and the role that the route needs. You can
+send a test request from the page. Paste a token from login into the
+"Authentication" box first.
 
-### 7.1 Endpoints
+The page comes from an OpenAPI 3.1 document in `api/openapi/openapi.js`
+(OpenAPI Initiative, 2024). The document reads its lists, patterns and length
+limits from the model and rule constants that the API uses. The messages and
+status codes are written by hand. A Jest test fails if a route is in the API
+but not in the document, or the reverse. Scalar shows the document as a page (Scalar, n.d.). The page has a
+"Download OpenAPI Document" link, so you can import the file into Postman.
 
-| Method | Endpoint | Auth | Role | Purpose |
+### 8.1 Endpoints
+
+Base URL `https://localhost:5001`. Each body is JSON. A protected route needs
+`Authorization: Bearer <token>`.
+
+| Method | Route | Auth | Role | Purpose |
 |---|---|---|---|---|
-| `POST` | `/auth/register` | none | none | Create an account, returns a JWT |
-| `POST` | `/auth/login` | none | none | Sign in, returns a JWT |
-| `PATCH` | `/users/:id/role` | JWT | **Admin** | Change another account's role |
-| `POST` | `/{resource}` | JWT | any | Create a record |
-| `GET` | `/{resource}` | JWT | any | List records, with a `count` |
-| `GET` | `/{resource}/:id` | JWT | any | Fetch one record |
-| `PUT` | `/{resource}/:id` | JWT | any | Replace a record in full |
-| `DELETE` | `/{resource}/:id` | JWT | any | Delete a record |
+| `GET` | `/health` | None | None | Checks that the API runs |
+| `POST` | `/auth/register` | None | None | Creates a Client or a Freelancer, returns a token |
+| `POST` | `/auth/login` | None | None | Returns a token |
+| `GET` | `/auth/me` | Token | Any | Returns the current user |
+| `GET` | `/gigs` | Token | Any | Lists active gigs. Query: `category`, `search` |
+| `GET` | `/gigs/mine` | Token | Freelancer | Lists the gigs of the caller |
+| `GET` | `/gigs/:id` | Token | Any | Returns one gig |
+| `POST` | `/gigs` | Token | Freelancer | Creates a gig |
+| `PUT` | `/gigs/:id` | Token | Freelancer, owner | Replaces a gig |
+| `DELETE` | `/gigs/:id` | Token | Freelancer owner, Admin | Deletes a gig, or makes a booked gig inactive |
+| `POST` | `/bookings` | Token | Client | Books a gig and records the transaction |
+| `GET` | `/bookings` | Token | Any | Lists the bookings that the caller can see |
+| `GET` | `/bookings/:id` | Token | A party, Admin | Returns one booking |
+| `GET` | `/transactions` | Token | Any | Lists the transactions that the caller can see |
+| `GET` | `/transactions/:id` | Token | A party, Admin | Returns one transaction |
+| `GET` | `/income/me` | Token | Freelancer | Returns the income summary |
+| `GET` | `/users` | Token | Admin | Lists the users |
+| `PATCH` | `/users/:id/role` | Token | Admin | Changes the role of another user |
+| `GET` | `/docs` | None | None | The documentation page. Off in production |
 
-`{resource}` is one of `bookings`, `clients`, `freelancers`, `invoices`, `pops`
-or `services`. All six expose the same five verbs, so they are documented once.
-
-### 7.2 Register and login
+### 8.2 Request bodies
 
 **`POST /auth/register`**
 
-| Field | Type | Required | Rules |
+| Field | Type | Required | Rule |
 |---|---|---|---|
-| `name` | string | yes | 2 to 50 characters, letters, spaces, hyphens and apostrophes |
-| `email` | string | yes | Valid address, trimmed and lowercased, must be unique |
-| `password` | string | yes | 8 to 72 characters with upper, lower, number and symbol. Never trimmed |
-| `role` | string | no | `Client` or `Freelancer`, defaults to `Client`. `Admin` is refused |
+| `name` | string | Yes | 2 to 50 letters. Spaces, hyphens and apostrophes are allowed |
+| `email` | string | Yes | A valid address. The API trims it and makes it lower case. It must be unique |
+| `password` | string | Yes | 8 to 72 characters with an uppercase letter, a lowercase letter, a number and a symbol |
+| `role` | string | No | `Client` or `Freelancer`. The default is `Client` |
 
 ```json
-{
-  "name": "Ethan Edwards",
-  "email": "ethan.edwards@hustlehub.test",
-  "password": "Ethan!Pass1",
-  "role": "Freelancer"
-}
+{ "name": "Ethan Edwards", "email": "ethan.edwards@hustlehub.test", "password": "Ethan!Pass1", "role": "Freelancer" }
 ```
 
-`201 Created`
+**`POST /auth/login`**: `email` and `password`, both strings. Login does not
+apply the password pattern. The pattern is a rule for a new password, not for
+a sign in.
 
-```json
-{
-  "success": true,
-  "message": "Registration successful",
-  "data": {
-    "name": "Ethan Edwards",
-    "email": "ethan.edwards@hustlehub.test",
-    "role": "Freelancer",
-    "_id": "6a91e48284e36fb40ec00de6",
-    "createdAt": "2026-08-28T19:41:54.910Z",
-    "updatedAt": "2026-08-28T19:41:54.910Z"
-  },
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhOTFlNDgyODRlMzZmYjQwZWMwMGRlNiIsInJvbGUiOiJGcmVlbGFuY2VyIiwiaWF0IjoxNzg3OTQ2MTE1LCJleHAiOjE3ODc5NDk3MTV9.C4iLwlKx80u3hNPaj8xLQsW8ndRCBBNTXP7rjwsbddM"
-}
-```
+**`POST /gigs` and `PUT /gigs/:id`**
 
-`password` is absent from `data`. It is stripped by the model and can never
-appear in a response.
-
-| Status | Cause |
-|---|---|
-| `201` | Account created, returns the user and a token |
-| `400` | Any field invalid, including a self assigned `Admin` role or a non string value |
-| `409` | Email already registered, in any letter case |
-| `413` | Body over 10kb |
-
-**`POST /auth/login`**
-
-| Field | Type | Required | Rules |
+| Field | Type | Required | Rule |
 |---|---|---|---|
-| `email` | string | yes | Valid address, trimmed and lowercased |
-| `password` | string | yes | Any non empty string, not trimmed |
+| `title` | string | Yes | 3 to 80 characters after the API removes HTML |
+| `description` | string | Yes | 10 to 1000 characters after the API removes HTML |
+| `category` | string | Yes | One of the 8 categories in [5.1](#51-data-model) |
+| `rate` | number | Yes | 0.01 to 100000, at most 2 decimals |
+| `rateType` | string | Yes | `Once`, `Hour` or `Day` |
+| `isActive` | boolean | No | `true` or `false`. The default is `true` |
+
+`PUT` needs every required field again. If you leave out `isActive`, the gig
+keeps its current value.
+
+**`POST /bookings`**
+
+| Field | Type | Required | Rule |
+|---|---|---|---|
+| `gig` | string | Yes | The 24 character id of an active gig |
+| `scheduledFor` | string | Yes | An ISO date in the future, at most 365 days ahead |
+| `quantity` | number | No | A whole number from 1 to 100. The default is 1 |
 
 ```json
-{ "email": "ethan.edwards@hustlehub.test", "password": "Ethan!Pass1" }
+{ "gig": "6aca2dd9f61a7d45c020b5fc", "scheduledFor": "2026-10-17T09:00:00.000Z", "quantity": 1 }
 ```
 
-`200 OK` returns the same envelope as registration with the message
-`Login successful`.
+**`PATCH /users/:id/role`**: `{ "role": "Client" }`. The value is `Client`,
+`Freelancer` or `Admin`.
 
-| Status | Cause |
-|---|---|
-| `200` | Credentials correct, returns the user and a token |
-| `400` | `email` or `password` missing or not a string |
-| `401` | Unknown email **or** wrong password, identical message for both |
+### 8.3 Response format
 
-Login deliberately does not apply the password complexity pattern. Complexity is
-a rule for choosing a password, not for presenting one, and applying it here
-would reveal the rule and reject older passwords under a tightened policy.
+Each response has one of two shapes.
 
-### 7.3 Marketplace resources
-
-All six share the same status codes.
-
-| Status | Cause |
-|---|---|
-| `201` | Created, `POST` only |
-| `200` | Retrieved, updated or deleted |
-| `400` | Validation failed, or the `:id` is not a valid ObjectId |
-| `401` | Missing, malformed, forged or expired token |
-| `404` | No record with that id |
-| `413` | Body over 10kb |
-| `500` | Unexpected error, logged in full server side |
-
-| Resource | Fields |
-|---|---|
-| **Services** | `category` (`HouseCleaning` or `DogGrooming`), `rate` (number, 0 or more), `rateType` (`Once`, `Hour` or `Day`) |
-| **Clients** | `name` |
-| **Freelancers** | `name`, optional `services` array of service objects |
-| **Invoices** | `amount` (number, 0 or more), optional `dateIssued`, optional embedded `pop` |
-| **Pops** | optional `datePaid`, defaults to now |
-| **Bookings** | `date`, optional `quantity` (whole number, defaults to 1), and embedded `client`, `freelancer` and `service` objects |
-
-```json
-// POST /bookings
-{
-  "date": "2026-09-01T09:00:00.000Z",
-  "quantity": 3,
-  "client": { "name": "Tyreece S" },
-  "freelancer": {
-    "name": "Ndumsio J",
-    "services": [ { "category": "HouseCleaning", "rate": 300, "rateType": "Hour" } ]
-  },
-  "service": { "category": "HouseCleaning", "rate": 300, "rateType": "Hour" }
-}
-```
-
-A booking embeds copies of the client, freelancer and service rather than
-referencing them. This is deliberate: a booking is a financial record and must
-stay an accurate account of the terms agreed on the day, even if the freelancer
-later changes their advertised rate.
-
-```http
-POST   /services       201  { "success": true, "message": "Service created",    "data": { ... } }
-GET    /services       200  { "success": true, "message": "Services retrieved", "data": [ ... ], "count": 4 }
-GET    /services/:id   200  { "success": true, "message": "Service retrieved",  "data": { ... } }
-PUT    /services/:id   200  { "success": true, "message": "Service updated",    "data": { ... } }
-DELETE /services/:id   200  { "success": true, "message": "Service deleted" }
-```
-
-`PUT` replaces the whole document and uses the same rules as `POST`, so every
-required field must be resent. `DELETE` responses carry no `data`, because there
-is no longer a record to return.
-
-### 7.4 `PATCH /users/:id/role`
-
-Requires a valid JWT **and** the `Admin` role. The body is `{ "role": "..." }`
-where the value is `Client`, `Freelancer` or `Admin`. `Admin` is allowed here,
-unlike at registration; the safety comes from `requireRole('Admin')` on the
-route, not from restricting the list.
-
-| Status | Cause |
-|---|---|
-| `200` | `Role updated` |
-| `400` | `role` missing or unknown, or `:id` is not an ObjectId |
-| `401` | Missing, forged or expired token |
-| `403` | Authenticated, but not an Admin |
-| `404` | `User not found` |
-
-There is intentionally no `GET /users` or `DELETE /users/:id`. A user listing
-endpoint would be a ready made harvest of every email address on the platform and
-is not needed by any Part 1 requirement.
-
-### 7.5 Response format
-
-Every response, success or failure, uses one of two shapes, so a client never has
-to guess what it received.
-
-```json
+```jsonc
 // success
-{ "success": true, "message": "Services retrieved", "data": [], "count": 0 }
+{ "success": true, "message": "Gigs retrieved", "data": [], "count": 0 }
 
 // failure
 { "success": false, "message": "Validation failed",
-  "errors": [ { "field": "email", "message": "Email must be text" } ] }
+  "errors": [{ "field": "email", "message": "Email must be text" }] }
 ```
 
-| Key | When present |
+| Key | When it is present |
 |---|---|
 | `success` | Always |
-| `message` | Always. Safe text only, never a stack trace, path or config value |
-| `data` | On success, except `DELETE` |
-| `count` | List endpoints only |
-| `token` | Register and login only |
-| `errors` | Validation failures only, one entry per rejected field |
+| `message` | Always. Safe text only |
+| `data` | On success, except a gig delete that removes the gig |
+| `count` | List routes |
+| `token` | Register and login |
+| `errors` | A validation failure or a forbidden key, one entry for each field |
 
-**Live failure captures.** Each of these is a real response from the running API:
+A real booking from `GET /bookings`, as the Admin sees it:
 
-```jsonc
-// 400  privilege escalation refused at registration
-{ "success": false, "message": "Validation failed",
-  "errors": [ { "field": "role", "message": "Role must be one of: Client, Freelancer" } ] }
-
-// 400  NoSQL operator injection refused
-{ "success": false, "message": "Validation failed",
-  "errors": [ { "field": "email", "message": "Email must be text" } ] }
-
-// 400  malformed JSON, caught before any route runs
-{ "success": false, "message": "Request body is not valid JSON" }
-
-// 401  no token, then a token that will not verify
-{ "success": false, "message": "Authentication required" }
-{ "success": false, "message": "Invalid token" }
-
-// 401  identical for an unknown email and a wrong password
-{ "success": false, "message": "Invalid email or password" }
-
-// 403  authenticated, but not an Admin
-{ "success": false, "message": "You do not have permission to perform this action" }
-
-// 404  unknown route, as JSON rather than an HTML error page
-{ "success": false, "message": "Route not found" }
-
-// 409  duplicate registration, caught by the unique index
-{ "success": false, "message": "An account with that email already exists" }
-
-// 413  oversized body
-{ "success": false, "message": "Request body is too large" }
+```json
+{
+  "_id": "6aca2dd9f61a7d45c020b5fd",
+  "gig": { "_id": "6aca2dd9f61a7d45c020b5fc", "title": "Garden waste removal" },
+  "client": { "_id": "6aca2dd3f61a7d45c020b5ed", "name": "Dylan Olsen" },
+  "freelancer": { "_id": "6aca2dd4f61a7d45c020b5ee", "name": "Ethan Edwards" },
+  "scheduledFor": "2026-10-17T12:21:45.055Z",
+  "quantity": 1,
+  "unitRate": 150,
+  "rateType": "Hour",
+  "total": 150,
+  "status": "Confirmed"
+}
 ```
 
-Not one of them names a file, a line, a module or a database.
+Its transaction, from `GET /transactions`:
+
+```json
+{
+  "_id": "6aca2dd9f61a7d45c020b5fe",
+  "booking": "6aca2dd9f61a7d45c020b5fd",
+  "client": { "_id": "6aca2dd3f61a7d45c020b5ed", "name": "Dylan Olsen" },
+  "freelancer": { "_id": "6aca2dd4f61a7d45c020b5ee", "name": "Ethan Edwards" },
+  "amount": 150,
+  "currency": "ZAR",
+  "status": "Completed",
+  "reference": "HH-91165D15A87A1A05"
+}
+```
+
+Inside a gig, a booking or a transaction, a related user shows its `_id` and
+`name` only. The email and the role of that user stay on the server
+(Automattic, n.d. c). Only the Admin user routes return an email and a role.
+
+`GET /income/me` for Ethan Edwards after a Newman run returns:
+
+```json
+{ "currency": "ZAR", "total": 1483.32, "count": 3,
+  "byMonth": [{ "month": "2026-10", "total": 1483.32, "count": 3 }] }
+```
 
 ---
 
-## 8. Testing
+## 9. Testing
 
-The API is tested with a Postman collection of **83 requests** making **401
-assertions**. All of them pass.
+The tests have five layers. The first four run with no server.
 
-The collection is organised into **12 folders** rather than a flat list, because
-83 individual requests is unreadable as a checklist and gives no sense of what is
-covered. Each folder is a self contained theme and can be run on its own.
+| Layer | Tool | Size | Command | Result |
+|---|---|---|---|---|
+| Code style | ESLint, with `eqeqeq` and `curly` as errors | Both apps | `npm run lint` | 0 errors |
+| API unit tests | Jest (OpenJS Foundation, n.d. e) | 12 suites, 81 tests | `npm run test:unit` | All pass |
+| Frontend tests | Vitest and React Testing Library | 1 file, 2 tests | `npm run test:client` | All pass. More tests are to do |
+| Dependency audit | `npm audit --omit=dev` | Both apps | `npm run audit` | 0 vulnerabilities |
+| API integration tests | Postman and Newman | 14 folders, 192 requests, 1,323 assertions | `npm run test:api` | All pass |
 
-### 8.1 How to run it
+`npm run test:all` runs the first four layers in one command. GitHub Actions
+will run them on each push in Part 3.
 
-**Headless, through Newman.** Newman is Postman's command line collection runner,
-so the same collection that runs in the app runs unattended and can be scripted
-(Postman, Inc., n.d. b). The fastest way, and the one used for evidence.
+The audit leaves out development tools, such as Newman and Scalar, because
+they do not run in production. A full `npm audit` reports advisories in these
+tools. The team checks them again in Part 3.
+
+### 9.1 API unit tests (Jest)
+
+The unit tests check the rules that are hard to reach through HTTP. Each test
+proves one rule.
+
+| Suite | What it proves |
+|---|---|
+| `authenticate` | A token with an operator as its id, a bad id, or the HS512 algorithm gets 401 before any query |
+| `bookingService` | The total has no float drift. Booking dates and quantities follow the rules. Each role sees only its own side. A transaction cannot change. A failed payment removes its booking |
+| `docsPolicy` | The `/docs` page runs only scripts with a new nonce for each response, and calls only this API |
+| `errorHandler`, `handleError` | An unknown error gets a generic 500. A duplicate gets the right 409 message |
+| `gigFilter` | Browse shows active gigs only. Search text with regex characters is plain text |
+| `incomeService` | Income sums to whole cents and sorts by month |
+| `isAllowedOrigin` | CORS accepts the exact origin only, not a look-alike or `*` |
+| `openapi` | The document lists each served route and no other. Only three routes are public |
+| `sanitize` | `$` keys, dotted keys, bracket keys and 5,000 level nesting get 400 |
+| `validateObjectId` | A 12 character string that Mongoose accepts gets 400 |
+| `validators` | Type checks, HTML stripping, money decimals, booleans and undeclared fields |
+
+### 9.2 API integration tests (Postman and Newman)
+
+**Run them:**
 
 ```bash
-# terminal 1
-npm run db:reset      # empty database with a seeded Admin, the state the suite expects
-npm start
+# terminal 1, from the root
+cd api
+npm run db:reset
+cd ..
+npm run api
 
-# terminal 2
+# terminal 2, from the root
 npm run test:api
 ```
 
-`npm run test:api` does more than call Newman. It checks that every required
-`.env` value is present, that something is answering on the HTTPS port, and that
-the database holds only the seeded Admin, failing with an actionable message
-rather than a confusing test failure. It then injects `baseUrl`, `adminEmail` and
-`adminPassword` from `.env`, which is why the admin password is not stored in the
-collection file.
+Start the API again before each run. The rate limit counts stay in memory. One
+run uses 193 of the 300 global requests: 192 tests and one start-up check.
 
-**In the Postman app.** Import both files from `api/postman/`:
+`npm run test:api` checks `.env`, checks that the API answers, and checks that
+the database holds only the Admin. It then gives Newman `baseUrl`, `adminEmail`
+and `adminPassword` from `.env`, so the collection holds no password. Newman
+writes an HTML report and a JSON report to `api/postman/reports/` (Postman,
+Inc., n.d. b).
 
-1. `HustleHub-Plus.postman_collection.json`, the 83 requests.
-2. `HustleHub-Plus.postman_environment.json`, the environment.
+**In the Postman app:** import the collection and the environment from
+`api/postman/`. Select **HustleHub+ Local**, fill in `adminPassword`, run
+`npm run db:reset`, then run the collection (Postman, Inc., n.d. a).
 
-Select the **HustleHub+ Local** environment in the top right and fill in the one
-blank value, `adminPassword`, so that it matches `ADMIN_PASSWORD` in your `.env`.
-`baseUrl` and `adminEmail` already carry working defaults. Nothing needs to be
-filled in on the collection itself, so a fresh clone is two imports and one
-password.
-
-Then run `npm run db:reset` and choose **Run collection**.
-
-The collection turns off certificate verification for its own requests, because
-the development certificate is self signed, so nothing needs changing in Postman.
-If a request still reports a certificate error, turn off **Settings > General >
-SSL certificate verification** as well.
-
-If a value is missing, a collection level pre-request script skips every request
-and prints which variable to set, rather than letting the run fail 83 times over.
-
-The collection declares no variables of its own. Configuration and the tokens and
-ids captured during a run all live in the environment, so the collection file
-never accumulates credentials and imports without any secret warning.
-
-### 8.2 Coverage
-
-| # | Folder | Requests | Assertions | What it covers |
+| # | Folder | Requests run | Assertions | What it covers |
 |---|---|---:|---:|---|
-| 1 | Registration, successful | 4 | 29 | Creates the four fixture accounts reused by every later folder. Confirms a `201`, a well formed token, and no password in the response |
-| 2 | Registration, invalid scenarios | 11 | 52 | The negative path: duplicate emails, case variants, self assigned Admin, NoSQL operators, missing fields, weak passwords, malformed emails, script tags, malformed JSON, oversized bodies, unknown routes |
-| 3 | Login | 4 | 20 | Successful login for a user and the Admin, capturing both tokens. Wrong password and unknown account, each asserting the identical message |
-| 4 | Authentication required | 5 | 20 | A protected route refused with no token, a malformed header, a token that is not a JWT, and a **forged Admin token** |
-| 5 | Role enforcement | 5 | 23 | A Client cannot change a role, an Admin can, an unknown role is refused, an unknown account gives `404`, then the change is reverted |
-| 6 | Services | 8 | 40 | Full CRUD, plus an invalid category and a negative rate, ending with a delete and a `404` confirming it is gone |
-| 7 | Clients | 8 | 38 | Full CRUD, plus a script tag in the name and a malformed ObjectId in the URL |
-| 8 | Freelancers | 8 | 39 | Full CRUD, plus an invalid nested service entry and a `services` value that is not a list |
-| 9 | Invoices | 8 | 40 | Full CRUD, plus a negative amount carrying a malformed nested date, and a non numeric amount |
-| 10 | Pops | 7 | 34 | Full CRUD for proof of payment records, plus an invalid date |
-| 11 | Bookings | 9 | 42 | Full CRUD across three embedded documents, plus nested validation failures and **unknown fields inside an embedded document** |
-| 12 | The suite leaves no records behind | 6 | 24 | Confirms all six collections are empty again, proving the suite cleans up after itself |
-| | **Total** | **83** | **401** | |
+| 1 | Registration, successful | 4 | 41 | Makes the fixture accounts. No hash in a response. Extra fields are ignored |
+| 2 | Registration, invalid scenarios | 12 | 92 | Duplicates, self assigned Admin, operator injection, weak passwords, script tags, bad JSON, big bodies, unknown routes |
+| 3 | Login | 4 | 32 | Good logins for a user and the Admin. The same message for a wrong password and an unknown account |
+| 4 | Authentication required | 5 | 35 | No token, a bad header, a token that is not a JWT, a forged Admin token |
+| 5 | Role enforcement | 5 | 38 | Only an Admin changes a role. Unknown role, unknown user |
+| 6 | Gigs | 39 | 267 | Full CRUD, role checks, owner checks, field rules, filters, search, inactive gigs, Admin removal |
+| 7 | Bookings | 32 | 232 | Role checks, server total, double booking, date and quantity rules, party only reads, list scope |
+| 8 | Transactions | 13 | 85 | Party only reads, list scope, no create, no edit, no delete |
+| 9 | Income | 5 | 33 | The Freelancer total and months. Other roles get 403 |
+| 10 | Current user and role changes | 15 | 101 | `/auth/me`, user list, no self demotion, a role change applies to an old token |
+| 11 | Deleted gigs are gone and the records remain | 7 | 46 | A booked gig stays inactive. A moderated gig stays off |
+| 12 | Sanitisation | 18 | 127 | `$where`, dotted keys, query operators, script tags, encoded markup, deep nesting, operator shaped ids |
+| 13 | Headers and CORS | 4 | 22 | Preflight from the client origin, refusal for another origin, HSTS |
+| 14 | Rate limits | 29 | 172 | Login per account and per IP, booking spam. A good login still works |
+| | **Total** | **192** | **1,323** | |
 
-### 8.3 What every response is checked for
+**Checks on every response.** A collection level test runs after each request
+(Postman, Inc., n.d. c). It checks five rules. Rules 4 and 5 skip the 4
+preflight responses, because a preflight has no body.
 
-Assertions are written as `pm.test` blocks against the parsed response (Postman,
-Inc., n.d. c). Beyond each request's own assertions, a collection level test
-runs after **all 83 requests**. It contributes 166 of the 401 assertions and enforces two guarantees
-that must hold everywhere, including on every failure path:
+1. The CSP has `default-src 'none'` and `frame-ancestors 'none'`, and
+   `X-Content-Type-Options` and `X-Frame-Options` are present.
+2. The CSP has no `script-src`, no `style-src` and no `unsafe-inline`.
+3. `X-Powered-By` is absent.
+4. The body is JSON, not an HTML error page.
+5. The body has no `node_modules`, project path, `at JSON.parse` or `MongoServerError`.
 
-1. **The response is JSON, not an HTML error page.** This catches anything that
-   fell through to Express's default handler.
-2. **The response exposes no internal detail.** The body must not contain
-   `node_modules`, the repository path, `at JSON.parse` or `MongoServerError`, so
-   no stack trace, file path or raw driver error can reach a client.
-
-This is what makes the claim in [5.5](#55-controlled-error-handling) testable
-rather than merely stated.
-
-### 8.4 The fixture cast
-
-The suite uses a fixed cast rather than generated addresses, so a run is
-reproducible and assertions can be exact.
+**The fixture cast.** The tests use fixed accounts, so a run gives the same
+result each time.
 
 | Account | Email | Role |
 |---|---|---|
@@ -1229,12 +1355,9 @@ reproducible and assertions can be exact.
 | Dylan Olsen | `dylan.olsen@hustlehub.test` | Client |
 | Ethan Edwards | `ethan.edwards@hustlehub.test` | Freelancer |
 | Ndumsio J | `ndumsio.j@hustlehub.test` | Freelancer |
-| Site Admin | from `.env` | Admin, seeded out of band |
+| Site Admin | From `.env` | Admin, from the seed script |
 
-Tokens and record ids pass between requests through collection variables, so the
-suite is one ordered run rather than a set of independent calls.
-
-### 8.5 Result
+**Result:**
 
 ```
 ┌─────────────────────────┬───────────────────┬──────────────────┐
@@ -1242,159 +1365,206 @@ suite is one ordered run rather than a set of independent calls.
 ├─────────────────────────┼───────────────────┼──────────────────┤
 │              iterations │                 1 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│                requests │                83 │                0 │
+│                requests │               192 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│            test-scripts │               166 │                0 │
+│            test-scripts │               384 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│      prerequest-scripts │                 1 │                0 │
+│      prerequest-scripts │               249 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│              assertions │               401 │                0 │
+│              assertions │              1323 │                0 │
 ├─────────────────────────┴───────────────────┴──────────────────┤
-│ total run duration: 3.3s                                       │
+│ total run duration: 7.5s                                       │
 └────────────────────────────────────────────────────────────────┘
 ```
 
+### 9.3 Frontend tests (Vitest)
+
+Vitest runs the tests in jsdom, and React Testing Library uses the page as a
+person does (Vitest Team, n.d.; Testing Library, n.d.).
+
+| Test | What it proves |
+|---|---|
+| `HomePage` shows that the API is online | The page renders and reads the health check |
+| `HomePage` shows that the API is offline, then checks again on click | The page shows a failure and reacts to a click |
+
+The full set of rendering and interaction tests is still to do. See
+[section 11](#11-part-2-work-still-to-do).
+
 ---
 
-## 9. Coming soon
+## 10. Known limits
 
-The full HustleHub+ system is built across three parts. Part 1 delivers the
-secure backend foundations. The rest arrives in Parts 2 and 3.
+- **A token stays valid until it expires.** The role check runs on each request,
+  but the API keeps no list of revoked tokens. A logout ends the token in the
+  browser only.
+- **Rate limit counts are in memory.** A restart clears them, and two API
+  servers would count apart. A shared store, such as Redis, fixes this in a
+  multi server set-up.
+- **The certificate is self signed.** A real deployment uses a certificate from
+  a certificate authority. No code changes.
+- **Payment is simulated.** A booking records a completed transaction. No money
+  moves.
+- **There is no booking cancel route.** The `Cancelled` status exists in the
+  model for later work.
 
-| Capability | Part | Status |
+---
+
+## 11. Part 2 work still to do
+
+The API is done. These items are open.
+
+**React client**
+
+- [ ] `AuthContext`, protected routes, role based routes and the navigation bar
+- [ ] Register and login pages, with client side validation that matches the API rules
+- [ ] Browse gigs and the gig detail page
+- [ ] The booking form and the simulated payment confirmation
+- [ ] Freelancer "My gigs": create, edit, make inactive
+- [ ] Bookings and transactions pages
+- [ ] Freelancer income page
+- [ ] A CSP for the production build, one style across pages, and clear error messages
+- [ ] Optional: an Admin users page
+
+**Frontend tests**
+
+- [ ] Rendering and interaction tests: login, register, protected route, navigation bar, gig card, booking form, error display
+- [ ] A coverage report (`npm run test:coverage` in `client/`)
+
+**Evidence**
+
+- [ ] Screenshots of the client and the test runs
+- [ ] The demonstration video: authentication, gig creation, booking, bookings list and transaction record
+- [ ] More than 50 commits with clear messages, from each team member
+
+---
+
+## 12. Coming in Part 3
+
+| Capability | Status |
+|---|---|
+| A tax estimate for Freelancers | Part 3 |
+| A financial dashboard with charts | Part 3 |
+| Logging of security events | Part 3 |
+| Docker and Docker Compose | Part 3 |
+| A GitHub Actions pipeline that runs `npm run test:all` and Newman | Part 3 |
+| Static code analysis | Part 3 |
+
+---
+
+## 13. Demonstration
+
+### 13.1 Video
+
+- **Part 1:** [Video link](https://youtu.be/dxhXuTjIDsg). It shows registration,
+  login, a protected route with and without a token, and the bcrypt hash in
+  MongoDB Compass.
+- **Part 2:** To do.
+
+### 13.2 Screenshots
+
+The Part 2 screenshots of the client and the test runs are still to do. The
+Part 1 screenshots are below. They show the authentication base, which Part 2
+keeps.
+
+| # | Screenshot | What it shows |
 |---|---|---|
-| User registration and authentication using secure practices | 1 | **Done** |
-| Security controls: validation, HTTPS, access restrictions, safe errors | 1 | **Done** |
-| Automated API endpoint testing | 1 | **Done** |
-| A React frontend for registering, logging in, browsing and booking | 2 | Coming soon |
-| Freelancer management of gigs | 2 | Coming soon |
-| Client browsing and booking of gigs | 2 | Coming soon |
-| Role based access control across every endpoint | 2 | Coming soon |
-| Ownership checks, so users only reach their own records | 2 | Coming soon |
-| Transaction records created from bookings, with simulated payment | 2 | Coming soon |
-| Income tracking for Freelancers | 2 | Coming soon |
-| Input sanitisation | 2 | Coming soon |
-| Rate limiting on authentication and booking endpoints | 2 | Coming soon |
-| Security headers and a Content Security Policy | 2 | Coming soon |
-| Frontend component and interaction tests | 2 | Coming soon |
-| Estimated tax calculation for Freelancers | 3 | Coming soon |
-| A financial dashboard with charts and summaries | 3 | Coming soon |
-| Logging of key system events | 3 | Coming soon |
-| Containerisation with Docker and Docker Compose | 3 | Coming soon |
-| A CI/CD pipeline with automated tests and security scans | 3 | Coming soon |
-| Static code analysis | 3 | Coming soon |
+| 1 | `POST /auth/register` returns `201` with a token | Registration works |
+| 2 | `POST /auth/login` returns `200` with a token | Login works |
+| 3 | A duplicate registration returns `409` | The unique index works |
+| 4 | A wrong password returns `401` | One message for each login failure |
+| 5 | A validation failure returns `400` with `errors` | Every bad field at once |
+| 6 | A protected route with no token returns `401` | A token is required |
+| 7 | A forged Admin token returns `401` | The signature check works |
+| 8 | MongoDB Compass shows `$2b$12$` hashes | No plain text password is stored |
+| 9 | The certificate on `https://localhost:5001` | The API uses TLS |
+| 10 | The Part 1 Newman summary | The Part 1 suite passed |
 
-Two Part 1 details will also be revisited later. Because the role is read from
-the token, a demoted Admin keeps their authority until the token expires, which
-short lived tokens with refresh will address in Part 2. And the self signed
-certificate is replaced by a CA issued one at deployment, which needs no code
-change.
+**1. Registration works**
+![POST /auth/register returns 201 with a token](api/screenshots/1.png)
 
----
+**2. Login works**
+![POST /auth/login returns 200 with a token](api/screenshots/2.png)
 
-## 10. Demonstration
+**3. The unique index works**
+![Duplicate registration returns 409](api/screenshots/3.png)
 
-### 10.1 Video
+**4. One message for each login failure**
+![Wrong password returns 401](api/screenshots/4.png)
 
-> **[Video link](https://youtu.be/dxhXuTjIDsg)**
+**5. Every bad field at once**
+![Validation failure returns 400 with the errors array](api/screenshots/5.png)
 
-The recording shows the API running, a successful registration, and a login
-producing a token:
+**6. A token is required**
+![A protected route with no token returns 401](api/screenshots/6.png)
 
-1. MongoDB started, then `npm start` printing `https://localhost:5001`.
-2. `POST /auth/register` returning `201` with a token.
-3. `POST /auth/login` returning `200` with a token.
-4. The token used on a protected route, returning `200`.
-5. The same route without the token, returning `401`.
-6. MongoDB Compass showing the stored `$2b$12$` bcrypt hash.
+**7. The signature check works**
+![A forged Admin token returns 401](api/screenshots/7.png)
 
-### 10.2 Screenshots
+**8. No plain text password is stored**
+![Compass shows bcrypt hashes in users](api/screenshots/8.png)
 
-| # | Screenshot | Demonstrates |
-|---|---|---|
-| 1 | `POST /auth/register` returning `201` with a token | Registration works and issues a JWT |
-| 2 | `POST /auth/login` returning `200` with a token | Login works and issues a JWT |
-| 3 | Duplicate registration returning `409` | Uniqueness enforced by the database |
-| 4 | Wrong password returning `401` | Identical message, no account enumeration |
-| 5 | Validation failure returning `400` with the `errors` array | Every bad field reported at once |
-| 6 | A protected route with no token returning `401` | The JWT is required, not optional |
-| 7 | A forged Admin token returning `401` | Signature verification cannot be bypassed |
-| 8 | Compass showing `$2b$12$` hashes in `users` | No plaintext password is stored |
-| 9 | The certificate warning or padlock on `https://localhost:5001` | The API is served over TLS |
-| 10 | The Newman summary showing 401 of 401 passing | The full suite passes |
+**9. The API uses TLS**
+![The certificate on https://localhost:5001](api/screenshots/9.png)
 
-**1. Registration works and issues a JWT**
-![POST /auth/register returning 201 with a token](api/screenshots/1.png)
-
-**2. Login works and issues a JWT**
-![POST /auth/login returning 200 with a token](api/screenshots/2.png)
-
-**3. Uniqueness enforced by the database**
-![Duplicate registration returning 409](api/screenshots/3.png)
-
-**4. Identical message, no account enumeration**
-![Wrong password returning 401](api/screenshots/4.png)
-
-**5. Every bad field reported at once**
-![Validation failure returning 400 with the errors array](api/screenshots/5.png)
-
-**6. The JWT is required, not optional**
-![A protected route with no token returning 401](api/screenshots/6.png)
-
-**7. Signature verification cannot be bypassed**
-![A forged Admin token returning 401](api/screenshots/7.png)
-
-**8. No plaintext password is stored**
-![Compass showing bcrypt hashes in users](api/screenshots/8.png)
-
-**9. The API is served over TLS**
-![The certificate warning on https://localhost:5001](api/screenshots/9.png)
-
-**10. The full suite passes**
-![The Newman summary showing 401 of 401 passing](api/screenshots/10.png)
+**10. The Part 1 suite passed**
+![The Part 1 Newman summary](api/screenshots/10.png)
 
 ---
 
-## 11. References
+## 14. References
+
+Apostrophe Technologies (n.d.) *sanitize-html*. Available at:
+https://github.com/apostrophecms/apostrophe/tree/main/packages/sanitize-html
+(Accessed: 10 October 2026).
 
 Auth0 (n.d.) *node-jsonwebtoken*. Available at:
-https://github.com/auth0/node-jsonwebtoken (Accessed: 29 August 2026).
+https://github.com/auth0/node-jsonwebtoken (Accessed: 10 October 2026).
 
 Automattic (n.d. a) *Middleware*. Mongoose Documentation. Available at:
-https://mongoosejs.com/docs/middleware.html (Accessed: 29 August 2026).
+https://mongoosejs.com/docs/middleware.html (Accessed: 10 October 2026).
 
-Automattic (n.d. b) *Query*. Mongoose API Documentation. Available at:
-https://mongoosejs.com/docs/api/query.html (Accessed: 29 August 2026).
+Automattic (n.d. b) *Mongoose: Mongoose.prototype.set()*. Mongoose API
+Documentation. Available at:
+https://mongoosejs.com/docs/api/mongoose.html#Mongoose.prototype.set()
+(Accessed: 10 October 2026).
 
-Automattic (n.d. c) *Schemas*. Mongoose Documentation. Available at:
-https://mongoosejs.com/docs/guide.html (Accessed: 29 August 2026).
+Automattic (n.d. c) *Populate*. Mongoose Documentation. Available at:
+https://mongoosejs.com/docs/populate.html (Accessed: 10 October 2026).
 
-Automattic (n.d. d) *Validation*. Mongoose Documentation. Available at:
-https://mongoosejs.com/docs/validation.html (Accessed: 29 August 2026).
+Automattic (n.d. d) *Query*. Mongoose API Documentation. Available at:
+https://mongoosejs.com/docs/api/query.html (Accessed: 10 October 2026).
 
-Cooper, D., Santesson, S., Farrell, S., Boeyen, S., Housley, R. and Polk, W.
-(2008) *Internet X.509 public key infrastructure certificate and certificate
-revocation list (CRL) profile*. RFC 5280. Internet Engineering Task Force.
-Available at: https://www.rfc-editor.org/rfc/rfc5280 (Accessed: 29 August 2026).
+Automattic (n.d. e) *Schemas*. Mongoose Documentation. Available at:
+https://mongoosejs.com/docs/guide.html (Accessed: 10 October 2026).
+
+Automattic (n.d. f) *Validation*. Mongoose Documentation. Available at:
+https://mongoosejs.com/docs/validation.html (Accessed: 10 October 2026).
 
 Fielding, R.T. (2000) *Architectural styles and the design of network-based
-software architectures*. PhD thesis. University of California, Irvine. Available
-at: https://www.ics.uci.edu/~fielding/pubs/dissertation/top.htm (Accessed:
-29 August 2026).
+software architectures*. PhD thesis. University of California, Irvine.
+Available at: https://ics.uci.edu/~fielding/pubs/dissertation/top.htm
+(Accessed: 10 October 2026).
 
 Fielding, R., Nottingham, M. and Reschke, J. (eds.) (2022) *HTTP semantics*.
 RFC 9110. Internet Engineering Task Force. Available at:
-https://www.rfc-editor.org/rfc/rfc9110.html (Accessed: 29 August 2026).
+https://www.rfc-editor.org/rfc/rfc9110.html (Accessed: 10 October 2026).
+
+Friedly, N. (n.d.) *Configuration*. express-rate-limit Documentation.
+Available at: https://express-rate-limit.mintlify.app/reference/configuration
+(Accessed: 10 October 2026).
 
 Grassi, P.A., Fenton, J.L., Newton, E.M., Perlner, R.A., Regenscheid, A.R.,
 Burr, W.E. and Richer, J.P. (2017) *Digital identity guidelines: authentication
 and lifecycle management*. NIST Special Publication 800-63B. Gaithersburg, MD:
 National Institute of Standards and Technology. Available at:
-https://pages.nist.gov/800-63-3/sp800-63b.html (Accessed: 29 August 2026).
+https://pages.nist.gov/800-63-3/sp800-63b.html (Accessed: 10 October 2026).
+
+Hahn, E. (n.d.) *Helmet*. Available at: https://helmet.js.org/ (Accessed:
+10 October 2026).
 
 Hodges, J., Jackson, C. and Barth, A. (2012) *HTTP strict transport security
 (HSTS)*. RFC 6797. Internet Engineering Task Force. Available at:
-https://www.rfc-editor.org/rfc/rfc6797 (Accessed: 29 August 2026).
+https://www.rfc-editor.org/info/rfc6797/ (Accessed: 10 October 2026).
 
 Ishaq, M.M., Singh, P., Badjatya, S., Kumar, S., Tomar, Y. and Bansal, S. (2023)
 'Design and development of a user-friendly social media app using the MERN
@@ -1404,258 +1574,301 @@ doi: 10.1109/ICCPCT58313.2023.10245371.
 
 Jones, M., Bradley, J. and Sakimura, N. (2015) *JSON web token (JWT)*. RFC 7519.
 Internet Engineering Task Force. Available at:
-https://datatracker.ietf.org/doc/html/rfc7519 (Accessed: 29 August 2026).
+https://datatracker.ietf.org/doc/html/rfc7519 (Accessed: 10 October 2026).
 
 Jones, M. and Hardt, D. (2012) *The OAuth 2.0 authorization framework: bearer
 token usage*. RFC 6750. Internet Engineering Task Force. Available at:
-https://datatracker.ietf.org/doc/html/rfc6750 (Accessed: 29 August 2026).
+https://datatracker.ietf.org/doc/html/rfc6750 (Accessed: 10 October 2026).
 
-kelektiv (n.d.) *node.bcrypt.js*. Available at:
-https://github.com/kelektiv/node.bcrypt.js (Accessed: 29 August 2026).
+Meta Platforms, Inc. (n.d.) *React*. Available at: https://react.dev/
+(Accessed: 10 October 2026).
 
-McKay, K.A. and Cooper, D.A. (2019) *Guidelines for the selection, configuration,
-and use of transport layer security (TLS) implementations*. NIST Special
-Publication 800-52 Revision 2. Gaithersburg, MD: National Institute of Standards
-and Technology. Available at: https://csrc.nist.gov/pubs/sp/800/52/r2/final
-(Accessed: 29 August 2026).
-
-MITRE (2026a) *CWE-20: improper input validation*. Common Weakness Enumeration,
-version 4.20. Available at: https://cwe.mitre.org/data/definitions/20.html
-(Accessed: 29 August 2026).
+MITRE (2026a) *CWE-20: improper input validation*. Common Weakness Enumeration.
+Available at: https://cwe.mitre.org/data/definitions/20.html (Accessed:
+10 October 2026).
 
 MITRE (2026b) *CWE-79: improper neutralization of input during web page
-generation ('cross-site scripting')*. Common Weakness Enumeration, version 4.20.
-Available at: https://cwe.mitre.org/data/definitions/79.html (Accessed:
-29 August 2026).
+generation ('cross-site scripting')*. Common Weakness Enumeration. Available at:
+https://cwe.mitre.org/data/definitions/79.html (Accessed: 10 October 2026).
 
 MITRE (2026c) *CWE-204: observable response discrepancy*. Common Weakness
-Enumeration, version 4.20. Available at:
-https://cwe.mitre.org/data/definitions/204.html (Accessed: 29 August 2026).
+Enumeration. Available at: https://cwe.mitre.org/data/definitions/204.html
+(Accessed: 10 October 2026).
 
 MITRE (2026d) *CWE-209: generation of error message containing sensitive
-information*. Common Weakness Enumeration, version 4.20. Available at:
-https://cwe.mitre.org/data/definitions/209.html (Accessed: 29 August 2026).
+information*. Common Weakness Enumeration. Available at:
+https://cwe.mitre.org/data/definitions/209.html (Accessed: 10 October 2026).
 
-MITRE (2026e) *CWE-532: insertion of sensitive information into log file*. Common
-Weakness Enumeration, version 4.20. Available at:
-https://cwe.mitre.org/data/definitions/532.html (Accessed: 29 August 2026).
+MITRE (2026e) *CWE-532: insertion of sensitive information into log file*.
+Common Weakness Enumeration. Available at:
+https://cwe.mitre.org/data/definitions/532.html (Accessed: 10 October 2026).
 
-MITRE (2026f) *CWE-798: use of hard-coded credentials*. Common Weakness
-Enumeration, version 4.20. Available at:
-https://cwe.mitre.org/data/definitions/798.html (Accessed: 29 August 2026).
+MITRE (2026f) *CWE-639: authorization bypass through user-controlled key*.
+Common Weakness Enumeration. Available at:
+https://cwe.mitre.org/data/definitions/639.html (Accessed: 10 October 2026).
 
-MITRE (2026g) *CWE-915: improperly controlled modification of
-dynamically-determined object attributes*. Common Weakness Enumeration, version
-4.20. Available at: https://cwe.mitre.org/data/definitions/915.html (Accessed:
-29 August 2026).
+MITRE (2026g) *CWE-770: allocation of resources without limits or throttling*.
+Common Weakness Enumeration. Available at:
+https://cwe.mitre.org/data/definitions/770.html (Accessed: 10 October 2026).
 
-MITRE (2026h) *CWE-943: improper neutralization of special elements in data query
-logic*. Common Weakness Enumeration, version 4.20. Available at:
-https://cwe.mitre.org/data/definitions/943.html (Accessed: 29 August 2026).
+MITRE (2026h) *CWE-798: use of hard-coded credentials*. Common Weakness
+Enumeration. Available at: https://cwe.mitre.org/data/definitions/798.html
+(Accessed: 10 October 2026).
+
+MITRE (2026i) *CWE-915: improperly controlled modification of
+dynamically-determined object attributes*. Common Weakness Enumeration.
+Available at: https://cwe.mitre.org/data/definitions/915.html (Accessed:
+10 October 2026).
+
+MITRE (2026j) *CWE-943: improper neutralization of special elements in data
+query logic*. Common Weakness Enumeration. Available at:
+https://cwe.mitre.org/data/definitions/943.html (Accessed: 10 October 2026).
 
 MongoDB, Inc. (n.d.) *MERN stack explained*. Available at:
 https://www.mongodb.com/resources/languages/mern-stack (Accessed:
-29 August 2026).
+10 October 2026).
 
-MongoDB, Inc. (2026a) *Query predicates*. MongoDB Manual. Available at:
+MongoDB, Inc. (2026a) *Partial indexes*. MongoDB Manual. Available at:
+https://www.mongodb.com/docs/manual/core/index-partial/ (Accessed:
+10 October 2026).
+
+MongoDB, Inc. (2026b) *Query predicates*. MongoDB Manual. Available at:
 https://www.mongodb.com/docs/manual/reference/mql/query-predicates/ (Accessed:
-29 August 2026).
+10 October 2026).
 
-MongoDB, Inc. (2026b) *Schema validation*. MongoDB Manual. Available at:
-https://www.mongodb.com/docs/manual/core/schema-validation/ (Accessed:
-29 August 2026).
+MongoDB, Inc. (2026c) *Transactions*. MongoDB Manual. Available at:
+https://www.mongodb.com/docs/manual/core/transactions/ (Accessed:
+10 October 2026).
 
-MongoDB, Inc. (2026c) *Unique indexes*. MongoDB Manual. Available at:
-https://www.mongodb.com/docs/manual/core/index-unique/ (Accessed:
-29 August 2026).
+Motte, S. (n.d.) *dotenv*. Available at: https://github.com/motdotla/dotenv
+(Accessed: 10 October 2026).
 
-Motte, S. (n.d.) *dotenv*. Available at:
-https://github.com/motdotla/dotenv (Accessed: 29 August 2026).
+Mozilla (n.d. a) *Content Security Policy (CSP)*. MDN Web Docs. Available at:
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP (Accessed:
+10 October 2026).
 
-Mozilla (2025) *Cross-site scripting (XSS)*. MDN Web Docs. Available at:
+Mozilla (n.d. b) *Cross-Origin Resource Sharing (CORS)*. MDN Web Docs.
+Available at: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS
+(Accessed: 10 October 2026).
+
+Mozilla (n.d. c) *Cross-site scripting (XSS)*. MDN Web Docs. Available at:
 https://developer.mozilla.org/en-US/docs/Web/Security/Attacks/XSS (Accessed:
-29 August 2026).
+10 October 2026).
 
-Mozilla (2026a) *Strict-Transport-Security header*. MDN Web Docs. Available at:
-https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
-(Accessed: 29 August 2026).
+Mozilla (n.d. d) *Strict-Transport-Security header*. MDN Web Docs. Available
+at:
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Strict-Transport-Security
+(Accessed: 10 October 2026).
 
-Mozilla (2026b) *Transport layer security (TLS)*. MDN Web Docs. Available at:
+Mozilla (n.d. e) *Transport Layer Security (TLS)*. MDN Web Docs. Available at:
 https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Transport_Layer_Security
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
+
+Mozilla (n.d. f) *Window: sessionStorage property*. MDN Web Docs. Available at:
+https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage
+(Accessed: 10 October 2026).
 
 National Institute of Standards and Technology (2026) *Role based access
 control*. Computer Security Resource Center. Available at:
 https://csrc.nist.gov/projects/role-based-access-control (Accessed:
-29 August 2026).
+10 October 2026).
+
+OpenAPI Initiative (2024) *OpenAPI specification v3.1.1*. Available at:
+https://spec.openapis.org/oas/v3.1.1.html (Accessed: 10 October 2026).
 
 OpenJS Foundation (n.d. a) *About Node.js*. Available at:
-https://nodejs.org/en/about (Accessed: 29 August 2026).
+https://nodejs.org/en/about (Accessed: 10 October 2026).
 
-OpenJS Foundation (n.d. b) *Error handling*. Express.js Guide. Available at:
-https://expressjs.com/en/guide/error-handling.html (Accessed: 29 August 2026).
+OpenJS Foundation (n.d. b) *cors*. Express.js Middleware. Available at:
+https://expressjs.com/en/resources/middleware/cors.html (Accessed:
+10 October 2026).
 
-OpenJS Foundation (n.d. c) *Express object*. Express 5.x API Reference.
+OpenJS Foundation (n.d. c) *Error handling*. Express.js Guide. Available at:
+https://expressjs.com/en/guide/error-handling/ (Accessed: 10 October 2026).
+
+OpenJS Foundation (n.d. d) *Express object*. Express 5.x API Reference.
 Available at: https://expressjs.com/en/5x/api/express/ (Accessed:
-29 August 2026).
+10 October 2026).
 
-OpenJS Foundation (n.d. d) *HTTPS*. Node.js API Documentation. Available at:
-https://nodejs.org/api/https.html (Accessed: 29 August 2026).
+OpenJS Foundation (n.d. e) *Getting started*. Jest Documentation. Available
+at: https://jestjs.io/docs/getting-started (Accessed: 10 October 2026).
 
-OpenJS Foundation (n.d. e) *Routing*. Express.js Guide. Available at:
-https://expressjs.com/en/guide/routing.html (Accessed: 29 August 2026).
+OpenJS Foundation (n.d. f) *HTTPS*. Node.js API Documentation. Available at:
+https://nodejs.org/api/https.html (Accessed: 10 October 2026).
 
-OpenJS Foundation (n.d. f) *The Node.js event loop*. Node.js Documentation.
-Available at:
-https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick
-(Accessed: 29 August 2026).
+OpenJS Foundation (n.d. g) *Production best practices: performance and
+reliability*. Express.js Guide. Available at:
+https://expressjs.com/en/advanced/best-practice-performance/#set-node_env-to-production
+(Accessed: 10 October 2026).
 
-OpenJS Foundation (n.d. g) *TLS (SSL)*. Node.js API Documentation. Available
-at: https://nodejs.org/api/tls.html (Accessed: 29 August 2026).
+OpenJS Foundation (n.d. h) *Routing*. Express.js Guide. Available at:
+https://expressjs.com/en/guide/routing/ (Accessed: 10 October 2026).
 
-OpenJS Foundation (n.d. h) *Using middleware*. Express.js Guide. Available at:
-https://expressjs.com/en/guide/using-middleware.html (Accessed: 29 August 2026).
+OpenJS Foundation (n.d. i) *TLS (SSL)*. Node.js API Documentation. Available
+at: https://nodejs.org/api/tls.html (Accessed: 10 October 2026).
+
+OpenJS Foundation (n.d. j) *Using middleware*. Express.js Guide. Available at:
+https://expressjs.com/en/guide/using-middleware/ (Accessed: 10 October 2026).
 
 OWASP (n.d. a) *Authentication cheat sheet*. OWASP Cheat Sheet Series.
 Available at:
 https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
 
 OWASP (n.d. b) *Authorization cheat sheet*. OWASP Cheat Sheet Series.
 Available at:
 https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
 
-OWASP (n.d. c) *Cross site scripting prevention cheat sheet*. OWASP Cheat
+OWASP (n.d. c) *Content security policy cheat sheet*. OWASP Cheat Sheet Series.
+Available at:
+https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
+(Accessed: 10 October 2026).
+
+OWASP (n.d. d) *Cross site scripting prevention cheat sheet*. OWASP Cheat
 Sheet Series. Available at:
 https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
 
-OWASP (n.d. d) *Error handling cheat sheet*. OWASP Cheat Sheet Series.
+OWASP (n.d. e) *Error handling cheat sheet*. OWASP Cheat Sheet Series.
 Available at:
 https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
 
-OWASP (n.d. e) *Injection prevention cheat sheet*. OWASP Cheat Sheet Series.
-Available at:
-https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+OWASP (n.d. f) *HTTP security response headers cheat sheet*. OWASP Cheat Sheet
+Series. Available at:
+https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
+(Accessed: 10 October 2026).
 
-OWASP (n.d. f) *Input validation cheat sheet*. OWASP Cheat Sheet Series.
+OWASP (n.d. g) *Input validation cheat sheet*. OWASP Cheat Sheet Series.
 Available at:
 https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
 
-OWASP (n.d. g) *JSON web token cheat sheet*. OWASP Cheat Sheet Series.
+OWASP (n.d. h) *JSON web token cheat sheet*. OWASP Cheat Sheet Series.
 Available at:
 https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
 
-OWASP (n.d. h) *Logging cheat sheet*. OWASP Cheat Sheet Series. Available at:
+OWASP (n.d. i) *Logging cheat sheet*. OWASP Cheat Sheet Series. Available at:
 https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
 
-OWASP (n.d. i) *Mass assignment cheat sheet*. OWASP Cheat Sheet Series.
+OWASP (n.d. j) *Mass assignment cheat sheet*. OWASP Cheat Sheet Series.
 Available at:
 https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
 
-OWASP (n.d. j) *Password storage cheat sheet*. OWASP Cheat Sheet Series.
+OWASP (n.d. k) *Password storage cheat sheet*. OWASP Cheat Sheet Series.
 Available at:
 https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
 
-OWASP (n.d. k) *Regular expression denial of service - ReDoS*. Available at:
-https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS
-(Accessed: 29 August 2026).
+OWASP (n.d. l) *Regular expression denial of service - ReDoS*. Available at:
+https://community.owasp.org/attacks/Regular_expression_Denial_of_Service_-_ReDoS
+(Accessed: 10 October 2026).
 
-OWASP (n.d. l) *Secrets management cheat sheet*. OWASP Cheat Sheet Series.
-Available at:
-https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html
-(Accessed: 29 August 2026).
+OWASP (2021a) *A01:2021 broken access control*. OWASP Top 10:2021. Available
+at: https://top10.owasp.org/2021/A01_2021-Broken_Access_Control/ (Accessed:
+10 October 2026).
 
-OWASP (n.d. m) *Transport layer security cheat sheet*. OWASP Cheat Sheet
-Series. Available at:
-https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html
-(Accessed: 29 August 2026).
-
-OWASP (2021a) *A01:2021 broken access control*. OWASP Top 10:2021. Available at:
-https://owasp.org/Top10/2021/A01_2021-Broken_Access_Control/ (Accessed:
-29 August 2026).
-
-OWASP (2021b) *A02:2021 cryptographic failures*. OWASP Top 10:2021. Available at:
-https://owasp.org/Top10/2021/A02_2021-Cryptographic_Failures/ (Accessed:
-29 August 2026).
+OWASP (2021b) *A02:2021 cryptographic failures*. OWASP Top 10:2021. Available
+at: https://top10.owasp.org/2021/A02_2021-Cryptographic_Failures/ (Accessed:
+10 October 2026).
 
 OWASP (2021c) *A03:2021 injection*. OWASP Top 10:2021. Available at:
-https://owasp.org/Top10/2021/A03_2021-Injection/ (Accessed: 29 August 2026).
+https://top10.owasp.org/2021/A03_2021-Injection/ (Accessed: 10 October 2026).
 
-OWASP (2021d) *A05:2021 security misconfiguration*. OWASP Top 10:2021. Available
-at: https://owasp.org/Top10/2021/A05_2021-Security_Misconfiguration/ (Accessed:
-29 August 2026).
+OWASP (2021d) *A05:2021 security misconfiguration*. OWASP Top 10:2021.
+Available at: https://top10.owasp.org/2021/A05_2021-Security_Misconfiguration/
+(Accessed: 10 October 2026).
 
 OWASP (2021e) *A09:2021 security logging and monitoring failures*. OWASP Top
 10:2021. Available at:
-https://owasp.org/Top10/2021/A09_2021-Security_Logging_and_Monitoring_Failures/
-(Accessed: 29 August 2026).
+https://top10.owasp.org/2021/A09_2021-Security_Logging_and_Monitoring_Failures/
+(Accessed: 10 October 2026).
 
-OWASP (2023) *API3:2023 broken object property level authorization*. OWASP API
+OWASP (2023a) *API1:2023 broken object level authorization*. OWASP API
 Security Top 10, 2023 edition. Available at:
-https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
-(Accessed: 29 August 2026).
+https://api-security.owasp.org/editions/2023/en/0xa1-broken-object-level-authorization/
+(Accessed: 10 October 2026).
 
-OWASP (2025) *OWASP application security verification standard (ASVS)*. Version
-5.0.0. Available at:
-https://owasp.org/www-project-application-security-verification-standard/
-(Accessed: 29 August 2026).
+OWASP (2023b) *API3:2023 broken object property level authorization*. OWASP
+API Security Top 10, 2023 edition. Available at:
+https://api-security.owasp.org/editions/2023/en/0xa3-broken-object-property-level-authorization/
+(Accessed: 10 October 2026).
+
+OWASP (2023c) *API4:2023 unrestricted resource consumption*. OWASP API
+Security Top 10, 2023 edition. Available at:
+https://api-security.owasp.org/editions/2023/en/0xa4-unrestricted-resource-consumption/
+(Accessed: 10 October 2026).
+
+OWASP (2023d) *API5:2023 broken function level authorization*. OWASP API
+Security Top 10, 2023 edition. Available at:
+https://api-security.owasp.org/editions/2023/en/0xa5-broken-function-level-authorization/
+(Accessed: 10 October 2026).
 
 Parnas, D.L. (1972) 'On the criteria to be used in decomposing systems into
 modules', *Communications of the ACM*, 15(12), pp. 1053-1058.
 doi: 10.1145/361598.361623.
 
-Postman, Inc. (n.d. a) *Create and manage request collections in Postman*.
-Postman Learning Center. Available at:
-https://learning.postman.com/docs/collections/collections-overview/ (Accessed:
-29 August 2026).
+Postman, Inc. (n.d. a) *Collections overview*. Postman Learning Center.
+Available at: https://learning.postman.com/docs/use/use-collections/overview/
+(Accessed: 10 October 2026).
 
 Postman, Inc. (n.d. b) *Run and test collections from the command line using
 Newman CLI*. Postman Learning Center. Available at:
-https://learning.postman.com/docs/collections/using-newman-cli/command-line-integration-with-newman/
-(Accessed: 29 August 2026).
+https://learning.postman.com/docs/reference/newman-cli/command-line-integration-with-newman/
+(Accessed: 10 October 2026).
 
 Postman, Inc. (n.d. c) *Write scripts to test API response data in Postman*.
 Postman Learning Center. Available at:
 https://learning.postman.com/docs/tests-and-scripts/write-scripts/test-scripts/
-(Accessed: 29 August 2026).
+(Accessed: 10 October 2026).
 
 Provos, N. and Mazières, D. (1999) 'A future-adaptable password scheme',
 *Proceedings of the FREENIX Track: 1999 USENIX Annual Technical Conference*.
 Monterey, CA. USENIX Association, pp. 81-91. Available at:
 https://www.usenix.org/legacy/events/usenix99/provos/provos.pdf (Accessed:
-29 August 2026).
-
-Reenskaug, T. (1979) *Models-views-controllers*. Xerox PARC technical note.
-Available at:
-https://folk.universitetetioslo.no/trygver/1979/mvc-2/1979-12-MVC.pdf (Accessed:
-29 August 2026).
+10 October 2026).
 
 Rescorla, E. (2018) *The transport layer security (TLS) protocol version 1.3*.
 RFC 8446. Internet Engineering Task Force. Available at:
-https://www.rfc-editor.org/rfc/rfc8446 (Accessed: 29 August 2026).
+https://www.rfc-editor.org/info/rfc8446/ (Accessed: 10 October 2026).
 
 Romaniello, J.F. (n.d.) *selfsigned*. Available at:
-https://github.com/jfromaniello/selfsigned (Accessed: 29 August 2026).
+https://github.com/jfromaniello/selfsigned (Accessed: 10 October 2026).
+
+Scalar (n.d.) *API References for Express*. Available at:
+https://scalar.com/products/api-references/integrations/express (Accessed:
+10 October 2026).
+
+shadcn (n.d.) *shadcn/ui documentation*. Available at: https://ui.shadcn.com/docs
+(Accessed: 10 October 2026).
 
 Sheffer, Y., Hardt, D. and Jones, M. (2020) *JSON web token best current
 practices*. RFC 8725. Internet Engineering Task Force. Available at:
-https://datatracker.ietf.org/doc/html/rfc8725 (Accessed: 29 August 2026).
+https://datatracker.ietf.org/doc/html/rfc8725 (Accessed: 10 October 2026).
+
+Shopify, Inc. (n.d.) *React Router*. Available at: https://reactrouter.com/home
+(Accessed: 10 October 2026).
+
+Testing Library (n.d.) *React Testing Library: introduction*. Available at:
+https://testing-library.com/docs/react-testing-library/intro/ (Accessed:
+10 October 2026).
+
+Vite Team (n.d.) *Server options*. Vite Documentation. Available at:
+https://vite.dev/config/server-options (Accessed: 10 October 2026).
+
+Vitest Team (n.d.) *Getting started*. Vitest Documentation. Available at:
+https://vitest.dev/guide/ (Accessed: 10 October 2026).
 
 Wiggins, A. (2017) *III. Config*. The Twelve-Factor App. Available at:
-https://12factor.net/config (Accessed: 29 August 2026).
+https://12factor.net/config (Accessed: 10 October 2026).
 
-Wirtz, D. (n.d.) *bcrypt.js*. Available at:
-https://github.com/dcodeIO/bcrypt.js (Accessed: 29 August 2026).
+Wirtz, D. (n.d.) *bcrypt.js*. Available at: https://github.com/dcodeIO/bcrypt.js
+(Accessed: 10 October 2026).
 
 ---
 
-**HustleHub+** | INSY7314 | Information Systems 3D | Portfolio of Evidence | Part 1
+**HustleHub+** | INSY7314 | Information Systems 3D | Portfolio of Evidence | Part 2
