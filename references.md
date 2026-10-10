@@ -30,3 +30,5 @@
 - https://mongoosejs.com/docs/api/model.html#Model.exists()
 - https://www.mongodb.com/docs/manual/reference/operator/query/or/
 - https://www.mongodb.com/docs/manual/core/transactions/
+- https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateToString/
+- https://mongoosejs.com/docs/api/model.html#Model.aggregate()
