@@ -1,7 +1,6 @@
 import { fail } from '../utils/respond.js';
 
-// Match 24 hex characters only. mongoose.isValidObjectId also accepts any
-// 12 character string, which is not an id a client can send.
+// Accept 24 hex characters only, because mongoose.isValidObjectId also accepts any 12 character string.
 export const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 
 // Answer 400 before any query runs, so a bad id never reaches the driver.

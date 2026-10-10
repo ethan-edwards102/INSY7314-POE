@@ -21,3 +21,6 @@
 - https://jestjs.io/docs/ecmascript-modules
 - https://mongoosejs.com/docs/guide.html#indexes
 - https://mongoosejs.com/docs/guide.html#timestamps
+- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/escape
+- https://mongoosejs.com/docs/populate.html#field-selection
+- https://expressjs.com/en/5x/api/request/#reqquery

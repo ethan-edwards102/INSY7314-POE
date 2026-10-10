@@ -71,10 +71,6 @@ describe('checkRules and pickValidated', () => {
     });
 });
 
-/* ref
-https://jestjs.io/docs/ecmascript-modules
-*/
-
 describe('GIG_RULES', () => {
     const valid = {
         title: 'Weekly house cleaning',
@@ -120,3 +116,7 @@ describe('checkBoolean', () => {
         expect(checkBoolean(undefined, flag)).toBeNull();
     });
 });
+
+/* ref
+https://jestjs.io/docs/ecmascript-modules
+*/

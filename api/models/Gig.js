@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-// Export these values. Request validation uses them.
+// Request validation also uses these lists.
 export const GIG_CATEGORIES = [
     'HouseCleaning',
     'DogGrooming',
