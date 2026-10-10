@@ -1,6 +1,8 @@
 import { NAME_PATTERN, EMAIL_PATTERN, PASSWORD_PATTERN, USER_ROLES } from '../models/User.js';
 import { SERVICE_CATEGORIES, RATE_TYPES } from '../models/Service.js';
 import { GIG_CATEGORIES, RATE_TYPES as GIG_RATE_TYPES } from '../models/Gig.js';
+import { MAX_QUANTITY } from '../models/Booking.js';
+import { OBJECT_ID_PATTERN } from '../middleware/validateObjectId.js';
 
 // Users, clients and freelancers share this message.
 const NAME_MESSAGE = 'Name must be 2-50 letters and may contain spaces, hyphens and apostrophes';
@@ -123,10 +125,13 @@ export const checkNumber = (value, { field, label, min, max, integer = false, re
     return null;
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 // A date arrives as a string. This function parses the string. If the
 // function cannot read the date, it returns a 400 error that names the
-// field, not a CastError.
-export const checkDate = (value, { field, label, required = true }) => {
+// field, not a CastError. The optional "future" and "maxDaysAhead" rules
+// keep a date inside the window that a booking allows.
+export const checkDate = (value, { field, label, required = true, future = false, maxDaysAhead }, now = Date.now()) => {
     if (isMissing(value)) {
         return required ? { field, message: `${label} is required` } : null;
     }
@@ -135,8 +140,31 @@ export const checkDate = (value, { field, label, required = true }) => {
         return { field, message: `${label} must be a date` };
     }
 
-    if (Number.isNaN(new Date(value).getTime())) {
+    const time = new Date(value).getTime();
+
+    if (Number.isNaN(time)) {
         return { field, message: `${label} must be a valid date, for example 2026-09-01T09:00:00.000Z` };
+    }
+
+    if (future && time <= now) {
+        return { field, message: `${label} must be in the future` };
+    }
+
+    if (maxDaysAhead !== undefined && time > now + maxDaysAhead * DAY_MS) {
+        return { field, message: `${label} must be within ${maxDaysAhead} days` };
+    }
+
+    return null;
+};
+
+// Accept only a 24 character hex string, so an operator object cannot reach a query.
+export const checkObjectId = (value, { field, label, required = true }) => {
+    if (isMissing(value)) {
+        return required ? { field, message: `${label} is required` } : null;
+    }
+
+    if (typeof value !== 'string' || !OBJECT_ID_PATTERN.test(value)) {
+        return { field, message: `${label} must be a valid id` };
     }
 
     return null;
@@ -161,6 +189,7 @@ const CHECKERS = {
     string: checkString,
     number: checkNumber,
     date: checkDate,
+    objectId: checkObjectId,
     boolean: checkBoolean,
 };
 
@@ -285,13 +314,11 @@ export const INVOICE_RULES = {
     pop: { field: 'pop', label: 'Proof of payment', type: 'object', rules: POP_RULES, required: false },
 };
 
+// The table has no client, freelancer or total field, because the server sets them.
 export const BOOKING_RULES = {
-    date: { field: 'date', label: 'Date', type: 'date' },
-    // The schema sets this field to 1 by default, so it is optional.
-    quantity: { field: 'quantity', label: 'Quantity', type: 'number', min: 1, integer: true, required: false },
-    client: { field: 'client', label: 'Client', type: 'object', rules: CLIENT_RULES },
-    freelancer: { field: 'freelancer', label: 'Freelancer', type: 'object', rules: FREELANCER_RULES },
-    service: { field: 'service', label: 'Service', type: 'object', rules: SERVICE_RULES },
+    gig: { field: 'gig', label: 'Gig', type: 'objectId' },
+    scheduledFor: { field: 'scheduledFor', label: 'Scheduled date', type: 'date', future: true, maxDaysAhead: 365 },
+    quantity: { field: 'quantity', label: 'Quantity', type: 'number', min: 1, max: MAX_QUANTITY, integer: true, required: false },
 };
 
 // The table has no freelancer field, because the server sets the owner from the token.
