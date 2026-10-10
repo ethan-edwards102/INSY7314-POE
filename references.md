@@ -45,3 +45,4 @@
 - https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS
 - https://github.com/DannyDainton/newman-reporter-htmlextra
 - https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#escaping
+- https://www.mongodb.com/docs/manual/core/index-partial/

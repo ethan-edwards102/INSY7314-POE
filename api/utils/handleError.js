@@ -35,9 +35,17 @@ export const handleError = (res, error) => {
     // time. Because of this, it arrives as a driver error, not as a
     // Mongoose ValidationError.
     if (error.code === 11000) {
-        const [field = 'value'] = Object.keys(error.keyPattern ?? {});
+        const fields = Object.keys(error.keyPattern ?? {});
 
-        return fail(res, 409, `An account with that ${field} already exists`);
+        if (fields.includes('email')) {
+            return fail(res, 409, 'An account with that email already exists');
+        }
+
+        if (fields.includes('scheduledFor')) {
+            return fail(res, 409, 'You already booked this gig for that time');
+        }
+
+        return fail(res, 409, 'That record already exists');
     }
 
     logServerError(error);

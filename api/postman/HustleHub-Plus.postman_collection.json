@@ -4273,6 +4273,7 @@
                   "    pm.expect(booking.quantity).to.eql(1);",
                   "    pm.expect(booking.total).to.eql(333.33);",
                   "    pm.environment.set('dylanBookingId', booking._id);",
+                  "    pm.environment.set('dylanBookedFor', booking.scheduledFor);",
                   "});"
                 ]
               }
@@ -4299,6 +4300,68 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{dylanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The same booking sent twice is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test('The message says the gig is already booked for that time', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('You already booked this gig for that time');",
+                  "});",
+                  "",
+                  "pm.test('No data is returned, so no second booking exists', function () {",
+                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "A double click or a network retry repeats the request. The unique index stops a second booking and a second payment.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{dylanBookedFor}}\",\n  \"quantity\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4824,7 +4887,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{tyreeceToken}}",
+                  "value": "{{dylanToken}}",
                   "type": "string"
                 }
               ]

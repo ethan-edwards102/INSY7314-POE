@@ -67,6 +67,11 @@ bookingSchema.index({ client: 1, createdAt: -1 });
 bookingSchema.index({ freelancer: 1, createdAt: -1 });
 // Serve the check that a gig has bookings.
 bookingSchema.index({ gig: 1 });
+// Refuse the same Client, gig and time twice, so a retried request cannot charge twice.
+bookingSchema.index(
+    { client: 1, gig: 1, scheduledFor: 1 },
+    { unique: true, partialFilterExpression: { status: 'Confirmed' } }
+);
 
 export default mongoose.model('Booking', bookingSchema);
 
@@ -74,4 +79,5 @@ export default mongoose.model('Booking', bookingSchema);
 https://mongoosejs.com/docs/guide.html#indexes
 https://mongoosejs.com/docs/guide.html#timestamps
 https://mongoosejs.com/docs/validation.html#custom-validators
+https://www.mongodb.com/docs/manual/core/index-partial/
 */
