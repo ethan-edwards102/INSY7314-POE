@@ -8,7 +8,11 @@
     "client": "npm run dev --prefix client",
     "test:api": "npm run test:api --prefix api",
     "test:client": "npm test --prefix client",
-    "build:client": "npm run build --prefix client"
+    "build:client": "npm run build --prefix client",
+    "lint": "npm run lint --prefix api && npm run lint --prefix client",
+    "test:unit": "npm test --prefix api",
+    "audit": "npm audit --omit=dev --audit-level=high --prefix api && npm audit --omit=dev --audit-level=high --prefix client",
+    "test:all": "npm run lint && npm run test:unit && npm run test:client && npm run audit"
   },
   "engines": {
     "node": ">=22"
