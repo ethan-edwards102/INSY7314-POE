@@ -111,8 +111,8 @@ export const LOGIN_RULES = {
 
 // The typeof check rejects both "250" and { "$gt": 0 }. Neither value can
 // reach a query or a document.
-export const checkNumber = (value, { field, label, min, max, integer = false, required = true }) => {
-    if (value === undefined || value === null || value === '') {
+export const checkNumber = (value, { field, label, min, max, integer = false, cents = false, required = true }) => {
+    if (value === undefined || value === null) {
         return required ? { field, message: `${label} is required` } : null;
     }
 
@@ -122,6 +122,11 @@ export const checkNumber = (value, { field, label, min, max, integer = false, re
 
     if (integer && !Number.isInteger(value)) {
         return { field, message: `${label} must be a whole number` };
+    }
+
+    // Allow at most two decimal places, because money has no unit smaller than a cent.
+    if (cents && Math.abs(value * 100 - Math.round(value * 100)) > 1e-9) {
+        return { field, message: `${label} must have at most 2 decimal places` };
     }
 
     if (min !== undefined && value < min) {
@@ -200,7 +205,7 @@ const CHECKERS = {
     boolean: checkBoolean,
 };
 
-// Run a rule table. Return every problem found.
+// Return every error so the client sees all bad fields at once.
 export const checkRules = (source, rules) => {
     const errors = [];
     const body = source ?? {};
@@ -250,20 +255,20 @@ export const ROLE_RULES = {
     role: { field: 'role', label: 'Role', allowed: USER_ROLES },
 };
 
-// The table has no client, freelancer or total field, because the server sets them.
+// The server sets the client, freelancer and total, so this table lists only client input.
 export const BOOKING_RULES = {
     gig: { field: 'gig', label: 'Gig', type: 'objectId' },
     scheduledFor: { field: 'scheduledFor', label: 'Scheduled date', type: 'date', future: true, maxDaysAhead: 365 },
     quantity: { field: 'quantity', label: 'Quantity', type: 'number', min: 1, max: MAX_QUANTITY, integer: true, required: false },
 };
 
-// The table has no freelancer field, because the server sets the owner from the token.
+// The server sets the owner from the token, so this table lists only client input.
 export const GIG_RULES = {
     title: { field: 'title', label: 'Title', minLength: 3, maxLength: 80, freeText: true },
     description: { field: 'description', label: 'Description', minLength: 10, maxLength: 1000, freeText: true },
     category: { field: 'category', label: 'Category', allowed: GIG_CATEGORIES },
     // The smallest rate is 0.01, because a gig must cost more than nothing.
-    rate: { field: 'rate', label: 'Rate', type: 'number', min: 0.01, max: 100000 },
+    rate: { field: 'rate', label: 'Rate', type: 'number', min: 0.01, max: 100000, cents: true },
     rateType: { field: 'rateType', label: 'Rate type', allowed: GIG_RATE_TYPES },
     isActive: { field: 'isActive', label: 'Active flag', type: 'boolean', required: false },
 };

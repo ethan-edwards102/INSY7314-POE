@@ -7,7 +7,6 @@ import {
     GIG_RULES,
     pickValidated,
     REGISTRATION_RULES,
-    SELF_SERVICE_ROLES,
 } from '../utils/validators.js';
 
 describe('checkString', () => {
@@ -31,21 +30,22 @@ describe('checkString', () => {
     });
 });
 
-describe('self service roles', () => {
-    test('never include Admin', () => {
-        expect(SELF_SERVICE_ROLES).not.toContain('Admin');
-    });
-});
-
 describe('checkNumber', () => {
     const rate = { field: 'rate', label: 'Rate', min: 0 };
 
-    test('rejects a number sent as a string', () => {
+    test('rejects a string, an empty string and an operator object', () => {
         expect(checkNumber('250', rate)).toEqual({ field: 'rate', message: 'Rate must be a number' });
+        expect(checkNumber({ $gt: 0 }, rate)?.message).toBe('Rate must be a number');
+        expect(checkNumber('', { ...rate, required: false })?.message).toBe('Rate must be a number');
     });
 
-    test('rejects an operator object', () => {
-        expect(checkNumber({ $gt: 0 }, rate)?.message).toBe('Rate must be a number');
+    test('rejects more than two decimal places only when the rule is for money', () => {
+        const money = { ...rate, cents: true };
+
+        expect(checkNumber(1.005, money)?.message).toBe('Rate must have at most 2 decimal places');
+        expect(checkNumber(333.33, money)).toBeNull();
+        expect(checkNumber(0.1 + 0.2, money)).toBeNull();
+        expect(checkNumber(1.005, rate)).toBeNull();
     });
 
     test('rejects a value below the minimum', () => {

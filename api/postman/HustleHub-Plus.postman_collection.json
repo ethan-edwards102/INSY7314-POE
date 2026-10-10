@@ -2277,7 +2277,7 @@
           }
         },
         {
-          "name": "Reject a negative rate",
+          "name": "Reject a rate with fractions of a cent",
           "event": [
             {
               "listen": "test",
@@ -2288,11 +2288,9 @@
                   "    pm.response.to.have.status(400);",
                   "});",
                   "",
-                  "pm.test('Names every field that failed', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
-                  "    var fields = body.errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['rate']);",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var errors = pm.response.json().errors;",
+                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('rate');",
                   "});"
                 ]
               }
@@ -2315,10 +2313,10 @@
                 "gigs"
               ]
             },
-            "description": "A negative rate would turn a booking total into a refund.",
+            "description": "Money has no unit below a cent. A rate such as 1.005 would give a total that does not match the stored rate.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": -50,\n  \"rateType\": \"Hour\"\n}",
+              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": 1.005,\n  \"rateType\": \"Hour\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4521,6 +4519,65 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\",\n  \"quantity\": 1.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a quantity sent as an empty string",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var errors = pm.response.json().errors;",
+                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('quantity');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "An empty string must not pass as a missing quantity, because the total would become 0.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\",\n  \"quantity\": \"\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

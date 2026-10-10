@@ -3,8 +3,8 @@ import Booking from '../models/Booking.js';
 import Gig from '../models/Gig.js';
 import Transaction from '../models/Transaction.js';
 
-// Round to whole cents, because money has no smaller unit.
-export const computeTotal = (unitRate, quantity) => Math.round(unitRate * quantity * 100) / 100;
+// Multiply in whole cents, because a decimal product can round the wrong way.
+export const computeTotal = (unitRate, quantity) => (Math.round(unitRate * 100) * quantity) / 100;
 
 // Return null when the gig is not open to this client, so the caller answers 404.
 export const createBooking = async (clientId, { gig: gigId, scheduledFor, quantity }) => {

@@ -8,16 +8,10 @@ describe('isAllowedOrigin', () => {
         expect(isAllowedOrigin('https://localhost:5173', allowed)).toBe(true);
     });
 
-    test('rejects an unlisted origin', () => {
+    test('rejects an unlisted origin, a look-alike origin and a star wildcard', () => {
         expect(isAllowedOrigin('https://evil.example', allowed)).toBe(false);
-    });
-
-    test('rejects a look-alike origin that only starts with the client origin', () => {
         expect(isAllowedOrigin('https://localhost:5173.evil.example', allowed)).toBe(false);
         expect(isAllowedOrigin('http://localhost:5173', allowed)).toBe(false);
-    });
-
-    test('does not treat a star as a wildcard', () => {
         expect(isAllowedOrigin('https://evil.example', ['*'])).toBe(false);
     });
 

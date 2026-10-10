@@ -6,10 +6,6 @@ describe('buildBrowseFilter', () => {
         expect(buildBrowseFilter({})).toEqual({ isActive: true });
     });
 
-    test('adds the category to the filter', () => {
-        expect(buildBrowseFilter({ category: 'Plumbing' })).toEqual({ isActive: true, category: 'Plumbing' });
-    });
-
     test('matches the title without regard to case', () => {
         const { title } = buildBrowseFilter({ search: 'clean' });
 

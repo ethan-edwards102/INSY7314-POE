@@ -9,9 +9,9 @@ describe('computeTotal', () => {
         expect(computeTotal(333.33, 3)).toBe(999.99);
     });
 
-    test('rounds to whole cents', () => {
-        expect(computeTotal(10.005, 1)).toBe(10.01);
+    test('gives an exact total where a decimal product drifts', () => {
         expect(computeTotal(0.1, 3)).toBe(0.3);
+        expect(computeTotal(1.15, 3)).toBe(3.45);
     });
 });
 
@@ -33,6 +33,12 @@ describe('booking date rule', () => {
 });
 
 describe('booking rules', () => {
+    test('reject a quantity sent as an empty string', () => {
+        const errors = checkRules({ gig: 'a'.repeat(24), scheduledFor: '2999-01-01', quantity: '' }, BOOKING_RULES);
+
+        expect(errors).toContainEqual({ field: 'quantity', message: 'Quantity must be a number' });
+    });
+
     test('reject a gig sent as an operator object', () => {
         expect(checkObjectId({ $ne: null }, BOOKING_RULES.gig)?.field).toBe('gig');
     });
