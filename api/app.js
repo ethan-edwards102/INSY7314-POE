@@ -6,10 +6,14 @@ import incomeRoutes from './routes/incomeRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
+import { globalLimiter } from './middleware/rateLimiters.js';
 import { sanitizeRequest } from './middleware/sanitize.js';
 import { ok } from './utils/respond.js';
 
 const app = express();
+
+// Count every request first so a flood stops before any parsing or database work.
+app.use(globalLimiter);
 
 // Limit the payload size. This stops an attacker from using a large
 // payload to exhaust server memory.

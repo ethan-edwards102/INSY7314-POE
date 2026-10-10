@@ -37,3 +37,5 @@
 - https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
 - https://mongoosejs.com/docs/api/mongoose.html#Mongoose.prototype.trusted()
 - https://mongoosejs.com/docs/api/mongoose.html#Mongoose.prototype.set()
+- https://express-rate-limit.mintlify.app/reference/configuration
+- https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#protect-against-automated-attacks
