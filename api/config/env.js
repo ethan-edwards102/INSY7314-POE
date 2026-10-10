@@ -105,6 +105,8 @@ export const config = {
     port: process.env.PORT,
     mongoUri: process.env.MONGO_URI,
     clientOrigins: origins,
+    // Hide the /docs page in production, so a live server does not publish a map of its routes.
+    serveApiDocs: process.env.NODE_ENV !== 'production',
     rateLimits: {
         global: {
             windowMinutes: positiveInteger('RATE_LIMIT_GLOBAL_WINDOW_MINUTES', 15),
@@ -135,4 +137,5 @@ export const config = {
 
 /* ref
 https://developer.mozilla.org/en-US/docs/Web/API/URL/origin
+https://expressjs.com/en/advanced/best-practice-performance/#set-node_env-to-production
 */

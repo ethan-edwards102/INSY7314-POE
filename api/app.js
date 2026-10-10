@@ -1,15 +1,10 @@
 import express from 'express';
-import authRoutes from './routes/authRoutes.js';
-import bookingRoutes from './routes/bookingRoutes.js';
-import gigRoutes from './routes/gigRoutes.js';
-import incomeRoutes from './routes/incomeRoutes.js';
-import transactionRoutes from './routes/transactionRoutes.js';
-import userRoutes from './routes/userRoutes.js';
+import { config } from './config/env.js';
+import { apiRouters } from './routes/index.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 import { corsPolicy, securityHeaders } from './middleware/securityHeaders.js';
 import { globalLimiter } from './middleware/rateLimiters.js';
 import { sanitizeRequest } from './middleware/sanitize.js';
-import { ok } from './utils/respond.js';
 
 const app = express();
 
@@ -34,15 +29,25 @@ app.use(express.json({ limit: '10kb' }));
 // Run this before the routes so no controller sees a key that starts with a dollar sign.
 app.use(sanitizeRequest);
 
-// Keep this route public so a monitor can check the API without a token.
-app.get('/health', (req, res) => ok(res, 'OK'));
+// Load the documentation page outside production only, because the Scalar packages are development tools.
+if (config.serveApiDocs) {
+    try {
+        const { default: docsRoutes } = await import('./routes/docsRoutes.js');
 
-app.use('/auth', authRoutes);
-app.use('/bookings', bookingRoutes);
-app.use('/gigs', gigRoutes);
-app.use('/income', incomeRoutes);
-app.use('/transactions', transactionRoutes);
-app.use('/users', userRoutes);
+        app.use('/docs', docsRoutes);
+    } catch (error) {
+        // Start without the page when an install leaves out the development packages.
+        if (error.code !== 'ERR_MODULE_NOT_FOUND') {
+            throw error;
+        }
+
+        console.warn('The /docs page is off, because the Scalar packages are not installed.');
+    }
+}
+
+for (const [mountPath, router] of apiRouters) {
+    app.use(mountPath, router);
+}
 
 // Register these after the routes. This way, they only see a request that
 // no route handled. The error handler must come last. Express only
@@ -54,4 +59,5 @@ export default app;
 
 /* ref
 https://expressjs.com/en/guide/routing/
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import
 */

@@ -48,5 +48,16 @@
 - https://www.mongodb.com/docs/manual/core/index-partial/
 - https://nodejs.org/api/crypto.html#cryptorandombytessize-callback
 - https://developer.mozilla.org/en-US/docs/Web/API/URL/origin
+- https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/nonce
+- https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html#nonce-based
+- https://scalar.com/products/api-references/integrations/express#custom-cdn
+- https://nodejs.org/api/esm.html#importmetaresolvespecifier
+- https://expressjs.com/en/5x/api/response/#ressendfile
+- https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control
+- https://spec.openapis.org/oas/v3.1.1.html#paths-object
+- https://spec.openapis.org/oas/v3.1.1.html#security-scheme-object
+- https://jestjs.io/docs/ecmascript-modules#module-mocking-in-esm
+- https://expressjs.com/en/advanced/best-practice-performance/#set-node_env-to-production
+- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import
 - https://github.com/auth0/node-jsonwebtoken#jwtverifytoken-secretorpublickey-options-callback
 - https://datatracker.ietf.org/doc/html/rfc8725#section-3.1
