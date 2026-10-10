@@ -7796,6 +7796,66 @@
           }
         },
         {
+          "name": "An angle bracket in a gig is stored as typed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Stores the brackets as typed, not as HTML entities', function () {",
+                  "    var gig = pm.response.json().data;",
+                  "    pm.expect(gig.title).to.eql('Callout > 2 hours');",
+                  "    pm.expect(gig.description).to.eql('Rates > R500 and ages 5 < 10 are plain text.');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "The strip step escapes a bracket. The server must turn it back, so the title is readable and the length rule counts one character.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Callout > 2 hours\",\n  \"description\": \"Rates > R500 and ages 5 < 10 are plain text.\",\n  \"category\": \"Plumbing\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "An operator shaped gigs id is refused with 400",
           "event": [
             {

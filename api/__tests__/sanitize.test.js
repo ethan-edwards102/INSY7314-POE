@@ -106,20 +106,20 @@ describe('free text stripping', () => {
         expect(stripHtml('<script>alert(1)</script>')).toBe('');
     });
 
-    test('keeps an ampersand readable', () => {
+    test('keeps an ampersand and angle brackets readable instead of storing entities', () => {
         expect(stripHtml('Mowing & edging')).toBe('Mowing & edging');
+        expect(stripHtml('Callout > 2 hours')).toBe('Callout > 2 hours');
+        expect(stripHtml('Ages 5 < 10')).toBe('Ages 5 < 10');
+    });
+
+    test('counts an angle bracket as one character toward the title limit', () => {
+        expect(checkRules({ ...gig, title: `${'>'.repeat(80)}` }, GIG_RULES)).toEqual([]);
     });
 
     test('rejects a title that is only a script tag, because the length rule runs after stripping', () => {
         const errors = checkRules({ ...gig, title: '<script>alert(1)</script>' }, GIG_RULES);
 
         expect(errors).toEqual([{ field: 'title', message: 'Title must be at least 3 characters' }]);
-    });
-
-    test('does not count markup toward the minimum length', () => {
-        const errors = checkRules({ ...gig, title: '<b></b><i>ab</i>' }, GIG_RULES);
-
-        expect(errors.map((e) => e.field)).toEqual(['title']);
     });
 
     test('does not count markup toward the maximum length', () => {

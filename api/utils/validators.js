@@ -9,9 +9,14 @@ const NAME_MESSAGE = 'Name must be 2-50 letters and may contain spaces, hyphens 
 // Remove the Admin role. This stops a user from giving themselves the Admin role.
 export const SELF_SERVICE_ROLES = USER_ROLES.filter((role) => role !== 'Admin');
 
-// Remove every tag and restore the ampersand, so a title such as "Mowing & edging" stays readable.
+const ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>' };
+
+// Remove every tag, then restore the escaped text in one pass, so "Rates > R500" stays readable.
 export const stripHtml = (value) =>
-    sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).replaceAll('&amp;', '&');
+    sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).replace(
+        /&(?:amp|lt|gt);/g,
+        (entity) => ENTITIES[entity]
+    );
 
 // Treat undefined, null, and a string of only spaces as "not supplied".
 const isMissing = (value) =>
