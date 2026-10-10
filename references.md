@@ -24,3 +24,5 @@
 - https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/escape
 - https://mongoosejs.com/docs/populate.html#field-selection
 - https://expressjs.com/en/5x/api/request/#reqquery
+https://mongoosejs.com/docs/middleware.html#pre
+https://nodejs.org/api/crypto.html#cryptorandomuuidoptions
