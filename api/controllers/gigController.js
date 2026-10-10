@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Booking from '../models/Booking.js';
 import Gig from '../models/Gig.js';
 import { handleError, notFound } from '../utils/handleError.js';
@@ -62,8 +63,9 @@ export const createGig = async (req, res) => {
 
 export const updateGig = async (req, res) => {
     try {
+        // Treat a gig that the Admin removed as missing, so the owner cannot reverse the moderation.
         const gig = await Gig.findOneAndUpdate(
-            { _id: req.params.id, freelancer: req.user.id },
+            { _id: req.params.id, freelancer: req.user.id, removedByAdmin: mongoose.trusted({ $ne: true }) },
             req.validated,
             { returnDocument: 'after', runValidators: true }
         );
@@ -96,6 +98,11 @@ export const deleteGig = async (req, res) => {
         // Keep a booked gig, because its bookings and transactions still point to it.
         if (await Booking.exists({ gig: gig._id })) {
             gig.isActive = false;
+
+            if (req.user.role === 'Admin') {
+                gig.removedByAdmin = true;
+            }
+
             await gig.save();
 
             return ok(res, 'Gig deactivated because it has bookings', gig);
@@ -112,4 +119,5 @@ export const deleteGig = async (req, res) => {
 /* ref
 https://mongoosejs.com/docs/populate.html#field-selection
 https://mongoosejs.com/docs/api/model.html#Model.exists()
+https://mongoosejs.com/docs/api/mongoose.html#Mongoose.prototype.trusted()
 */

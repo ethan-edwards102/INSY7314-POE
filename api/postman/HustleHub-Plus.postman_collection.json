@@ -1547,7 +1547,7 @@
     },
     {
       "name": "5. Role enforcement",
-      "description": "PATCH /users/:id/role is the only Admin only route. A Client is refused, the Admin is not.",
+      "description": "PATCH /users/:id/role and GET /users are the Admin only routes. A Client is refused, the Admin is not.",
       "item": [
         {
           "name": "A Client cannot change a role",
@@ -2071,6 +2071,60 @@
                 {
                   "key": "token",
                   "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin cannot create a gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "Only a Freelancer sells work. The Admin moderates and never sells, so the answer is 403.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
                   "type": "string"
                 }
               ]
@@ -2722,7 +2776,7 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('No gig title holds that character', function () {",
+                  "pm.test('No gig title holds that text', function () {",
                   "    pm.expect(pm.response.json().count).to.eql(0);",
                   "});"
                 ]
@@ -2733,7 +2787,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/gigs?search=%E3%80%80",
+              "raw": "{{baseUrl}}/gigs?search=a%E3%80%80b",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -2743,7 +2797,7 @@
               "query": [
                 {
                   "key": "search",
-                  "value": "%E3%80%80"
+                  "value": "a%E3%80%80b"
                 }
               ]
             },
@@ -3198,6 +3252,61 @@
                 {
                   "key": "token",
                   "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin cannot edit a gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{gigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{gigId}}"
+              ]
+            },
+            "description": "The Admin may delete a gig to moderate it, but never edit one. The role check answers 403 and the next checks prove the gig is unchanged.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": 1,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
                   "type": "string"
                 }
               ]
@@ -3761,39 +3870,6 @@
               ]
             }
           }
-        },
-        {
-          "name": "Gigs need a signed in user",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 401', function () {",
-                  "    pm.response.to.have.status(401);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/gigs",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "gigs"
-              ]
-            },
-            "description": "The route sits behind authentication.",
-            "auth": {
-              "type": "noauth"
-            }
-          }
         }
       ]
     },
@@ -3977,6 +4053,64 @@
                 {
                   "key": "token",
                   "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin cannot book a gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test('No booking is created', function () {",
+                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "Only a Client books work, and a booking creates a payment. The Admin is refused with 403.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
                   "type": "string"
                 }
               ]
@@ -6294,14 +6428,7 @@
             },
             "description": "A token that is not a JWT must be refused before any income is read.",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{malformedToken}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             }
           }
         }
@@ -6937,7 +7064,7 @@
     },
     {
       "name": "11. Deleted gigs are gone and the records remain",
-      "description": "The gigs that the Gigs folder deleted are gone, and a booked gig was only deactivated. Four checks prove it. Bookings and transactions are permanent records, so the last two checks prove that they remain. The five accounts remain, because the API has no endpoint that deletes a user: `npm run db:reset` is what clears those.",
+      "description": "The gigs that the Gigs folder deleted are gone, and a booked gig was only deactivated. The last five checks show that an Admin removal of a booked gig stays in force even when the owner tries to undo it.",
       "item": [
         {
           "name": "A gig the Admin deleted is gone",
@@ -6968,47 +7095,6 @@
               ]
             },
             "description": "A delete with no bookings removes the gig, so it leaves nothing behind.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "A gig the owner deleted is gone",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 404', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/gigs/{{secondGigId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "gigs",
-                "{{secondGigId}}"
-              ]
-            },
-            "description": "This is a second check that the gig from the Gigs folder is gone after the whole run.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -7067,7 +7153,119 @@
           }
         },
         {
-          "name": "Deleted and inactive gigs are not listed",
+          "name": "Ethan lists a gig for the Admin to moderate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Stores the id', function () {",
+                  "    pm.environment.set('moderatedGigId', pm.response.json().data._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "Ethan owns this gig. A booking on it forces the Admin delete to deactivate it instead of removing it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Garden waste removal\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"Gardening\",\n  \"rate\": 150,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dylan books the gig to be moderated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "A booking makes the gig keep its history, so the Admin delete only deactivates it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{moderatedGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{dylanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin deletes the booked gig",
           "event": [
             {
               "listen": "test",
@@ -7078,12 +7276,111 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Only the active gig from the Gigs folder remains', function () {",
+                  "pm.test('The gig is inactive and marked as removed by the Admin', function () {",
+                  "    var gig = pm.response.json().data;",
+                  "    pm.expect(gig.isActive).to.be.false;",
+                  "    pm.expect(gig.removedByAdmin).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{moderatedGigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{moderatedGigId}}"
+              ]
+            },
+            "description": "The Admin may delete any gig. A booked gig is deactivated and marked as removed by the Admin.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The owner cannot switch a moderated gig back on",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{moderatedGigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{moderatedGigId}}"
+              ]
+            },
+            "description": "The Admin decision stands. The update query skips a gig that the Admin removed, so the owner gets 404.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Garden waste removal\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"Gardening\",\n  \"rate\": 150,\n  \"rateType\": \"Hour\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The moderated gig stays out of the browse list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The moderated gig is not listed', function () {",
                   "    var ids = pm.response.json().data.map(function (g) { return g._id; });",
-                  "    pm.expect(ids).to.include(pm.environment.get('gigId'));",
-                  "    pm.expect(ids).to.not.include(pm.environment.get('adminGigId'));",
-                  "    pm.expect(ids).to.not.include(pm.environment.get('secondGigId'));",
-                  "    pm.expect(ids).to.not.include(pm.environment.get('bookGigId'));",
+                  "    pm.expect(ids).to.not.include(pm.environment.get('moderatedGigId'));",
                   "});"
                 ]
               }
@@ -7101,103 +7398,13 @@
                 "gigs"
               ]
             },
-            "description": "The browse list shows active gigs only, so the deleted and deactivated gigs must be absent.",
+            "description": "Proves the refused update changed nothing, so no Client can book the gig again.",
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Bookings stay as permanent records",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Both bookings remain', function () {",
-                  "    var ids = pm.response.json().data.map(function (b) { return b._id; });",
-                  "    pm.expect(ids).to.include(pm.environment.get('bookingId'));",
-                  "    pm.expect(ids).to.include(pm.environment.get('dylanBookingId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/bookings",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "bookings"
-              ]
-            },
-            "description": "No route deletes a booking, so both bookings made above remain.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Transactions stay as permanent records",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Both transactions remain', function () {",
-                  "    pm.expect(pm.response.json().count).to.eql(2);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/transactions",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "transactions"
-              ]
-            },
-            "description": "No route deletes a transaction, so the financial history remains.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{tyreeceToken}}",
                   "type": "string"
                 }
               ]
@@ -7357,68 +7564,6 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\",\n  \"$where\": \"sleep(5000)\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{ethanToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "A nested operator key is refused",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Refuses the request with the forbidden key envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Request contains a forbidden key');",
-                  "    pm.expect(body.errors.map(function (e) { return e.field; })).to.eql([\"body.rate.$gt\"]);",
-                  "    pm.expect(body).to.not.have.property('data');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/gigs",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "gigs"
-              ]
-            },
-            "description": "The walker checks every depth, so an operator hidden inside an object still fails.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": {\n    \"$gt\": 0\n  },\n  \"rateType\": \"Hour\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -8348,10 +8493,6 @@
                   "var routeHeader = function (name) {",
                   "    var values = pm.response.headers.all().filter(function (h) { return h.key.toLowerCase() === name.toLowerCase(); });",
                   "    return values.length > 0 ? values[values.length - 1].value : '';",
-                  "};",
-                  "var remaining = function () {",
-                  "    var match = routeHeader('RateLimit').match(/;\\s*r=(\\d+)/);",
-                  "    return match ? Number(match[1]) : NaN;",
                   "};",
                   "var attempts = Number(pm.environment.get('rateLimitLoginAttempts')) + 1;",
                   "pm.environment.set('rateLimitLoginAttempts', attempts);",

@@ -41,14 +41,13 @@ export const findForbiddenKeys = (value, path = '') => {
 
 // Reject the request instead of rewriting it, so an attacker gets no silent success.
 export const sanitizeRequest = (req, res, next) => {
-    if ([req.body, req.query, req.params].some((part) => isTooDeep(part))) {
+    if ([req.body, req.query].some((part) => isTooDeep(part))) {
         return fail(res, 400, 'Request is nested too deeply');
     }
 
     const errors = [
         ...findForbiddenKeys(req.body, 'body'),
         ...findForbiddenKeys(req.query, 'query'),
-        ...findForbiddenKeys(req.params, 'params'),
     ].map((path) => ({ field: path, message: 'This key is not allowed' }));
 
     if (errors.length > 0) {

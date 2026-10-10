@@ -56,6 +56,11 @@ export const gigSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        // Only the Admin sets this flag, so the owner cannot switch a moderated gig back on.
+        removedByAdmin: {
+            type: Boolean,
+            default: false,
+        },
     },
     { timestamps: true }
 );
