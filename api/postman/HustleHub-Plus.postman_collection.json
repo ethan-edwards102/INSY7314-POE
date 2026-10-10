@@ -2,7 +2,7 @@
   "info": {
     "name": "HustleHub+ API",
     "_postman_id": "f56b799b-197e-4b45-a617-493a430aaea3",
-    "description": "# HustleHub+ API, Part 2\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources. 171 requests in 16 folders, 737 assertions.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 16 confirms the suite deleted the records it should delete, and that bookings and transactions remain.",
+    "description": "# HustleHub+ API, Part 2\n\nCovers registration, login, authentication, role enforcement, gigs, bookings, transactions,\nincome and Admin role changes. 131 requests in 11 folders, 540 assertions.\n\nThe folders run in order and share one set of accounts:\n\n1. Registration, successful. Creates the Clients and the Freelancers.\n2. Registration, invalid scenarios. Duplicates, injection, weak input and oversized bodies.\n3. Login. Valid and invalid credentials.\n4. Authentication required. No token, a broken token and a forged one on the gig routes.\n5. Role enforcement. Only the Admin changes a role.\n6. Gigs. Create, browse, search, update, deactivate and delete, with ownership checks.\n7. Bookings. Server side totals, validation, and who may read which booking.\n8. Transactions. Read only records, visible to the parties and the Admin.\n9. Income. The Freelancer income summary and who may read it.\n10. Current user and role changes. Profile, user list, and a role change that takes effect at once.\n11. Deleted gigs are gone and the records remain. Booked gigs are inactive, and bookings and transactions remain.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in folder 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Folder 11 confirms the suite deleted the gigs it should delete, and that bookings and transactions remain.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -1225,7 +1225,7 @@
       "description": "Protected routes with no token, a broken token, and a forged one.",
       "item": [
         {
-          "name": "Listing services without a token is refused",
+          "name": "Listing gigs without a token is refused",
           "event": [
             {
               "listen": "test",
@@ -1249,19 +1249,19 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/services",
+              "raw": "{{baseUrl}}/gigs",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "services"
+                "gigs"
               ]
             },
             "description": "Every marketplace route sits behind the authenticate middleware."
           }
         },
         {
-          "name": "Creating a service without a token is refused",
+          "name": "Creating a gig without a token is refused",
           "event": [
             {
               "listen": "test",
@@ -1288,18 +1288,18 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/services",
+              "raw": "{{baseUrl}}/gigs",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "services"
+                "gigs"
               ]
             },
             "description": "Authentication runs before validation, so a valid body still gets nowhere.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"category\": \"DogGrooming\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
+              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1336,12 +1336,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/services",
+              "raw": "{{baseUrl}}/gigs",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "services"
+                "gigs"
               ]
             },
             "description": "The header is present but not in the Bearer scheme the API expects."
@@ -1386,12 +1386,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/services",
+              "raw": "{{baseUrl}}/gigs",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "services"
+                "gigs"
               ]
             },
             "description": "A garbage token is an authentication failure, not a 500."
@@ -1453,12 +1453,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/services",
+              "raw": "{{baseUrl}}/gigs",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "services"
+                "gigs"
               ]
             },
             "description": "This token is structurally valid and its payload claims role Admin, but it was signed with a different secret. The signature check is what stops a caller writing their own token."
@@ -3674,1888 +3674,7 @@
       ]
     },
     {
-      "name": "7. Services",
-      "description": "A service through its whole life: create, list, read, update, delete, confirm it is gone.",
-      "item": [
-        {
-          "name": "Create a service",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Service created');",
-                  "});",
-                  "",
-                  "pm.test('Stores what was sent', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data).to.have.property('_id');",
-                  "    pm.expect(data.category).to.eql('DogGrooming');",
-                  "    pm.expect(data.rate).to.eql(250);",
-                  "    pm.expect(data.rateType).to.eql('Hour');",
-                  "});",
-                  "",
-                  "pm.environment.set('serviceId', pm.response.json().data._id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/services",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "services"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"category\": \"DogGrooming\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "List services",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Services retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns a counted list containing the new record', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.data).to.be.an('array');",
-                  "    pm.expect(body.count).to.eql(body.data.length);",
-                  "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.environment.get('serviceId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/services",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "services"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get the service by id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Service retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('serviceId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "services",
-                "{{serviceId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update the service",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Service updated');",
-                  "});",
-                  "",
-                  "pm.test('Returns the changed record', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.environment.get('serviceId'));",
-                  "    pm.expect(data.rate).to.eql(300);",
-                  "    pm.expect(data.rateType).to.eql('Day');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "services",
-                "{{serviceId}}"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"category\": \"DogGrooming\",\n  \"rate\": 300,\n  \"rateType\": \"Day\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Reject an invalid service",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Rejects the request with a validation error', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
-                  "});",
-                  "",
-                  "pm.test('Names the field that failed', function () {",
-                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['category']);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/services",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "services"
-              ]
-            },
-            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"category\": \"Hacking\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Reject a negative rate",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Rejects the request with a validation error', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
-                  "});",
-                  "",
-                  "pm.test('Names the field that failed', function () {",
-                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['rate']);",
-                  "});",
-                  "",
-                  "pm.test('Explains the bound that was broken', function () {",
-                  "    pm.expect(pm.response.json().errors[0].message).to.eql('Rate must be 0 or more');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/services",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "services"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"category\": \"HouseCleaning\",\n  \"rate\": -5,\n  \"rateType\": \"Hour\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Delete the service",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Service deleted');",
-                  "});",
-                  "",
-                  "pm.test('Carries no data with the confirmation', function () {",
-                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "services",
-                "{{serviceId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "The deleted service is gone",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 404', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});",
-                  "",
-                  "pm.test('Reports it as not found', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Service not found');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "services",
-                "{{serviceId}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "8. Clients",
-      "description": "A client record through its whole life, plus the malformed id case.",
-      "item": [
-        {
-          "name": "Create a client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Client created');",
-                  "});",
-                  "",
-                  "pm.test('Stores what was sent', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data).to.have.property('_id');",
-                  "    pm.expect(data.name).to.eql('Tyreece S');",
-                  "});",
-                  "",
-                  "pm.environment.set('clientId', pm.response.json().data._id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/clients",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "clients"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Tyreece S\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "List clients",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Clients retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns a counted list containing the new record', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.data).to.be.an('array');",
-                  "    pm.expect(body.count).to.eql(body.data.length);",
-                  "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.environment.get('clientId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/clients",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "clients"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get the client by id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Client retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('clientId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/clients/{{clientId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "clients",
-                "{{clientId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update the client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Client updated');",
-                  "});",
-                  "",
-                  "pm.test('Returns the changed record', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.environment.get('clientId'));",
-                  "    pm.expect(data.name).to.eql('Dylan Olsen');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/clients/{{clientId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "clients",
-                "{{clientId}}"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Dylan Olsen\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Reject an invalid client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Rejects the request with a validation error', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
-                  "});",
-                  "",
-                  "pm.test('Names the field that failed', function () {",
-                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['name']);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/clients",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "clients"
-              ]
-            },
-            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"<script>alert(1)</script>\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Reject a malformed id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Reports the bad value without exposing internals', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.include('Invalid value');",
-                  "    pm.expect(body.message).to.not.include('CastError');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/clients/not-a-valid-id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "clients",
-                "not-a-valid-id"
-              ]
-            },
-            "description": "A value Mongo cannot read as an ObjectId. The message names the field without repeating the driver error."
-          }
-        },
-        {
-          "name": "Delete the client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Client deleted');",
-                  "});",
-                  "",
-                  "pm.test('Carries no data with the confirmation', function () {",
-                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/clients/{{clientId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "clients",
-                "{{clientId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "The deleted client is gone",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 404', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});",
-                  "",
-                  "pm.test('Reports it as not found', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Client not found');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/clients/{{clientId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "clients",
-                "{{clientId}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "9. Freelancers",
-      "description": "A freelancer through its whole life. The embedded services list is validated entry by entry.",
-      "item": [
-        {
-          "name": "Create a freelancer",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Freelancer created');",
-                  "});",
-                  "",
-                  "pm.test('Stores what was sent', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data).to.have.property('_id');",
-                  "    pm.expect(data.name).to.eql('Ethan Edwards');",
-                  "    pm.expect(data.services).to.have.lengthOf(1);",
-                  "    pm.expect(data.services[0].category).to.eql('HouseCleaning');",
-                  "});",
-                  "",
-                  "pm.environment.set('freelancerId', pm.response.json().data._id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/freelancers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "freelancers"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Ethan Edwards\",\n  \"services\": [\n    {\n      \"category\": \"HouseCleaning\",\n      \"rate\": 180,\n      \"rateType\": \"Hour\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "List freelancers",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Freelancers retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns a counted list containing the new record', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.data).to.be.an('array');",
-                  "    pm.expect(body.count).to.eql(body.data.length);",
-                  "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.environment.get('freelancerId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/freelancers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "freelancers"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get the freelancer by id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Freelancer retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('freelancerId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/freelancers/{{freelancerId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "freelancers",
-                "{{freelancerId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update the freelancer",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Freelancer updated');",
-                  "});",
-                  "",
-                  "pm.test('Returns the changed record', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.environment.get('freelancerId'));",
-                  "    pm.expect(data.name).to.eql('Ndumsio J');",
-                  "    pm.expect(data.services).to.have.lengthOf(2);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/freelancers/{{freelancerId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "freelancers",
-                "{{freelancerId}}"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Ndumsio J\",\n  \"services\": [\n    {\n      \"category\": \"DogGrooming\",\n      \"rate\": 220,\n      \"rateType\": \"Day\"\n    },\n    {\n      \"category\": \"HouseCleaning\",\n      \"rate\": 180,\n      \"rateType\": \"Hour\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Reject an invalid freelancer",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Rejects the request with a validation error', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
-                  "});",
-                  "",
-                  "pm.test('Names the field that failed', function () {",
-                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['services[0].category', 'services[0].rate']);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/freelancers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "freelancers"
-              ]
-            },
-            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Ethan Edwards\",\n  \"services\": [\n    {\n      \"category\": \"Hacking\",\n      \"rate\": -1,\n      \"rateType\": \"Hour\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Reject a services list that is not a list",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Rejects the request with a validation error', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
-                  "});",
-                  "",
-                  "pm.test('Names the field that failed', function () {",
-                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['services']);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/freelancers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "freelancers"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Ethan Edwards\",\n  \"services\": \"HouseCleaning\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Delete the freelancer",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Freelancer deleted');",
-                  "});",
-                  "",
-                  "pm.test('Carries no data with the confirmation', function () {",
-                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/freelancers/{{freelancerId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "freelancers",
-                "{{freelancerId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "The deleted freelancer is gone",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 404', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});",
-                  "",
-                  "pm.test('Reports it as not found', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Freelancer not found');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/freelancers/{{freelancerId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "freelancers",
-                "{{freelancerId}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "10. Invoices",
-      "description": "An invoice through its whole life, including a nested proof of payment.",
-      "item": [
-        {
-          "name": "Create a invoice",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Invoice created');",
-                  "});",
-                  "",
-                  "pm.test('Stores what was sent', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data).to.have.property('_id');",
-                  "    pm.expect(data.amount).to.eql(1500);",
-                  "    pm.expect(data.pop).to.have.property('datePaid');",
-                  "});",
-                  "",
-                  "pm.environment.set('invoiceId', pm.response.json().data._id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/invoices",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "invoices"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 1500,\n  \"dateIssued\": \"2026-09-01T09:00:00.000Z\",\n  \"pop\": {\n    \"datePaid\": \"2026-09-02T09:00:00.000Z\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "List invoices",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Invoices retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns a counted list containing the new record', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.data).to.be.an('array');",
-                  "    pm.expect(body.count).to.eql(body.data.length);",
-                  "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.environment.get('invoiceId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/invoices",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "invoices"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get the invoice by id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Invoice retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('invoiceId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/invoices/{{invoiceId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "invoices",
-                "{{invoiceId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update the invoice",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Invoice updated');",
-                  "});",
-                  "",
-                  "pm.test('Returns the changed record', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.environment.get('invoiceId'));",
-                  "    pm.expect(data.amount).to.eql(1750);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/invoices/{{invoiceId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "invoices",
-                "{{invoiceId}}"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 1750,\n  \"dateIssued\": \"2026-09-01T09:00:00.000Z\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Reject an invalid invoice",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Rejects the request with a validation error', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
-                  "});",
-                  "",
-                  "pm.test('Names the field that failed', function () {",
-                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['amount', 'pop.datePaid']);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/invoices",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "invoices"
-              ]
-            },
-            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": -5,\n  \"pop\": {\n    \"datePaid\": \"not-a-date\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Reject a non numeric amount",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Rejects the request with a validation error', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
-                  "});",
-                  "",
-                  "pm.test('Names the field that failed', function () {",
-                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['amount']);",
-                  "});",
-                  "",
-                  "pm.test('Refuses an operator object where a number belongs', function () {",
-                  "    pm.expect(pm.response.json().errors[0].message).to.eql('Amount must be a number');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/invoices",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "invoices"
-              ]
-            },
-            "description": "The same NoSQL injection shape as the registration test, on a numeric field.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": { \"$gt\": 0 }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Delete the invoice",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Invoice deleted');",
-                  "});",
-                  "",
-                  "pm.test('Carries no data with the confirmation', function () {",
-                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/invoices/{{invoiceId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "invoices",
-                "{{invoiceId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "The deleted invoice is gone",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 404', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});",
-                  "",
-                  "pm.test('Reports it as not found', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Invoice not found');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/invoices/{{invoiceId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "invoices",
-                "{{invoiceId}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "11. Pops",
-      "description": "A proof of payment through its whole life. The date defaults when it is left out.",
-      "item": [
-        {
-          "name": "Create a pop",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Pop created');",
-                  "});",
-                  "",
-                  "pm.test('Stores what was sent', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data).to.have.property('_id');",
-                  "    pm.expect(data.datePaid).to.include('2026-09-02');",
-                  "});",
-                  "",
-                  "pm.environment.set('popId', pm.response.json().data._id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/pops",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pops"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"datePaid\": \"2026-09-02T09:00:00.000Z\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "List pops",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Pops retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns a counted list containing the new record', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.data).to.be.an('array');",
-                  "    pm.expect(body.count).to.eql(body.data.length);",
-                  "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.environment.get('popId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/pops",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pops"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get the pop by id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Pop retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('popId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/pops/{{popId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pops",
-                "{{popId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update the pop",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Pop updated');",
-                  "});",
-                  "",
-                  "pm.test('Returns the changed record', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.environment.get('popId'));",
-                  "    pm.expect(data.datePaid).to.include('2026-09-03');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/pops/{{popId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pops",
-                "{{popId}}"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"datePaid\": \"2026-09-03T09:00:00.000Z\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Reject an invalid pop",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Rejects the request with a validation error', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
-                  "});",
-                  "",
-                  "pm.test('Names the field that failed', function () {",
-                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['datePaid']);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/pops",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pops"
-              ]
-            },
-            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"datePaid\": \"not-a-date\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Delete the pop",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Pop deleted');",
-                  "});",
-                  "",
-                  "pm.test('Carries no data with the confirmation', function () {",
-                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/pops/{{popId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pops",
-                "{{popId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "The deleted pop is gone",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 404', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});",
-                  "",
-                  "pm.test('Reports it as not found', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Pop not found');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/pops/{{popId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pops",
-                "{{popId}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "12. Bookings",
+      "name": "7. Bookings",
       "description": "Tyreece books a gig of Ethan. The server sets the price, the client, the freelancer and the status. The folder proves who may book, which dates and quantities the server accepts, who may read each booking, and that a booked gig is deactivated instead of deleted.",
       "event": [
         {
@@ -7165,7 +5284,7 @@
       ]
     },
     {
-      "name": "13. Transactions",
+      "name": "8. Transactions",
       "description": "Each booking made one transaction. The folder proves that a caller reads only their own, that the amount equals the booking total, and that the API offers no way to create, change or delete one.",
       "item": [
         {
@@ -7771,7 +5890,7 @@
       ]
     },
     {
-      "name": "14. Income",
+      "name": "9. Income",
       "description": "GET /income/me sums the Completed transactions of the Freelancer who calls it.",
       "item": [
         {
@@ -8006,7 +6125,7 @@
       ]
     },
     {
-      "name": "15. Current user and role changes",
+      "name": "10. Current user and role changes",
       "description": "The API reads the role from the database on each request, so a role change takes effect at once.",
       "item": [
         {
@@ -8634,25 +6753,19 @@
       ]
     },
     {
-      "name": "16. The suite leaves no records behind",
-      "description": "Services, clients, freelancers, invoices and pops that the collection created were deleted by the folder that created them. Five checks prove it, so repeated runs do not fill the database. Bookings and transactions are permanent records, so the last two checks prove that they remain. The five accounts remain, because the API has no endpoint that deletes a user: `npm run db:reset` is what clears those.",
+      "name": "11. Deleted gigs are gone and the records remain",
+      "description": "The gigs that the Gigs folder deleted are gone, and a booked gig was only deactivated. Four checks prove it. Bookings and transactions are permanent records, so the last two checks prove that they remain. The five accounts remain, because the API has no endpoint that deletes a user: `npm run db:reset` is what clears those.",
       "item": [
         {
-          "name": "No services are left behind",
+          "name": "A gig the Admin deleted is gone",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('The services collection is empty again', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.count).to.eql(0);",
-                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
                   "});"
                 ]
               }
@@ -8662,32 +6775,38 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/services",
+              "raw": "{{baseUrl}}/gigs/{{adminGigId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "services"
+                "gigs",
+                "{{adminGigId}}"
+              ]
+            },
+            "description": "A delete with no bookings removes the gig, so it leaves nothing behind.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
               ]
             }
           }
         },
         {
-          "name": "No clients are left behind",
+          "name": "A gig the owner deleted is gone",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('The clients collection is empty again', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.count).to.eql(0);",
-                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
                   "});"
                 ]
               }
@@ -8697,18 +6816,30 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/clients",
+              "raw": "{{baseUrl}}/gigs/{{secondGigId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "clients"
+                "gigs",
+                "{{secondGigId}}"
+              ]
+            },
+            "description": "This is a second check that the gig from the Gigs folder is gone after the whole run.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
               ]
             }
           }
         },
         {
-          "name": "No freelancers are left behind",
+          "name": "A booked gig is kept but inactive",
           "event": [
             {
               "listen": "test",
@@ -8719,10 +6850,8 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('The freelancers collection is empty again', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.count).to.eql(0);",
-                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "pm.test('The gig stays, hidden from browsing, because bookings point to it', function () {",
+                  "    pm.expect(pm.response.json().data.isActive).to.be.false;",
                   "});"
                 ]
               }
@@ -8732,18 +6861,30 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/freelancers",
+              "raw": "{{baseUrl}}/gigs/{{bookGigId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "freelancers"
+                "gigs",
+                "{{bookGigId}}"
+              ]
+            },
+            "description": "Deleting a booked gig only deactivates it, so the booking history keeps its gig.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
               ]
             }
           }
         },
         {
-          "name": "No invoices are left behind",
+          "name": "Deleted and inactive gigs are not listed",
           "event": [
             {
               "listen": "test",
@@ -8754,10 +6895,12 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('The invoices collection is empty again', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.count).to.eql(0);",
-                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "pm.test('Only the active gig from the Gigs folder remains', function () {",
+                  "    var ids = pm.response.json().data.map(function (g) { return g._id; });",
+                  "    pm.expect(ids).to.include(pm.environment.get('gigId'));",
+                  "    pm.expect(ids).to.not.include(pm.environment.get('adminGigId'));",
+                  "    pm.expect(ids).to.not.include(pm.environment.get('secondGigId'));",
+                  "    pm.expect(ids).to.not.include(pm.environment.get('bookGigId'));",
                   "});"
                 ]
               }
@@ -8767,47 +6910,23 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/invoices",
+              "raw": "{{baseUrl}}/gigs",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "invoices"
+                "gigs"
               ]
-            }
-          }
-        },
-        {
-          "name": "No pops are left behind",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('The pops collection is empty again', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.count).to.eql(0);",
-                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/pops",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pops"
+            },
+            "description": "The browse list shows active gigs only, so the deleted and deactivated gigs must be absent.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
               ]
             }
           }
