@@ -2,7 +2,7 @@
   "info": {
     "name": "HustleHub+ API",
     "_postman_id": "f56b799b-197e-4b45-a617-493a430aaea3",
-    "description": "# HustleHub+ API, Part 1\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources. 83 requests in 12 folders, 401 assertions.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 12 confirms the suite deleted every marketplace record it created.",
+    "description": "# HustleHub+ API, Part 1\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources. 120 requests in 13 folders, 544 assertions.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 12 confirms the suite deleted every marketplace record it created.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -1787,7 +1787,1894 @@
       ]
     },
     {
-      "name": "6. Services",
+      "name": "6. Gigs",
+      "description": "Freelancers sell gigs and everyone signed in browses them. The folder proves ownership in the query, the role checks, id and query validation, and the inactive rule. It leaves one live gig (gigId) for the bookings folder to book.",
+      "item": [
+        {
+          "name": "Log in as Tyreece",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Stores the token for later requests', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.token).to.be.a(\"string\");",
+                  "    pm.environment.set('tyreeceToken', body.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Stores a token per person, so each gig request names the caller with request level auth and the collection default stays as it is.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"tyreece.s@hustlehub.test\",\n  \"password\": \"Tyreece!Pass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Log in as Ethan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Stores the token for later requests', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.token).to.be.a(\"string\");",
+                  "    pm.environment.set('ethanToken', body.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Stores a token per person, so each gig request names the caller with request level auth and the collection default stays as it is.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ethan.edwards@hustlehub.test\",\n  \"password\": \"Ethan!Pass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Log in as Ndumsio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Stores the token for later requests', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.token).to.be.a(\"string\");",
+                  "    pm.environment.set('ndumsioToken', body.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Stores a token per person, so each gig request names the caller with request level auth and the collection default stays as it is.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ndumsio.j@hustlehub.test\",\n  \"password\": \"Ndumsio!Pass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A Client cannot create a gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test('Refuses on the role', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('You do not have permission to perform this action');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "Only a Freelancer sells work. The Client is signed in, so this is authorisation failing: 403, not 401.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create a gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Gig created');",
+                  "});",
+                  "",
+                  "pm.test('The Freelancer in the token owns the gig', function () {",
+                  "    var gig = pm.response.json().data;",
+                  "    pm.expect(gig.freelancer).to.eql(pm.environment.get('ethanId'));",
+                  "    pm.expect(gig.isActive).to.be.true;",
+                  "    pm.expect(gig.rate).to.eql(250);",
+                  "    pm.environment.set('gigId', gig._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "The owner comes from the token. The id is stored for the requests that follow.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "An owner id in the body is ignored",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('The gig belongs to the caller, not the id in the body', function () {",
+                  "    var gig = pm.response.json().data;",
+                  "    pm.expect(gig.freelancer).to.eql(pm.environment.get('ethanId'));",
+                  "    pm.environment.set('secondGigId', gig._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "A caller must not create a gig in the name of someone else. The server sets the owner from the token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Garden tidy up\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"Gardening\",\n  \"rate\": 250,\n  \"rateType\": \"Hour\",\n  \"freelancer\": \"{{ndumsioId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject an invalid gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Names every field that failed', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "    var fields = body.errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['title','description','category','rateType']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "Every rule is checked in one pass, so the client can show all problems at once.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"ab\",\n  \"description\": \"short\",\n  \"category\": \"Hacking\",\n  \"rate\": 250,\n  \"rateType\": \"Week\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a zero rate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Names every field that failed', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "    var fields = body.errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['rate']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "A gig must cost more than nothing, so the boundary value 0 is refused.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": 0,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a negative rate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Names every field that failed', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "    var fields = body.errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['rate']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "A negative rate would turn a booking total into a refund.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": -50,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a rate sent as an operator object",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Names every field that failed', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "    var fields = body.errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['rate']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "A NoSQL operator object must never reach Mongoose in place of a number.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": {\n    \"$gt\": 0\n  },\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List gigs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Every gig is active and shows only the freelancer name', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.count).to.eql(body.data.length);",
+                  "    pm.expect(body.count).to.be.at.least(2);",
+                  "    body.data.forEach(function (g) {",
+                  "        pm.expect(g.isActive).to.be.true;",
+                  "        pm.expect(Object.keys(g.freelancer).sort()).to.eql(['_id', 'name']);",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test('The newest gig comes first', function () {",
+                  "    var times = pm.response.json().data.map(function (g) { return Date.parse(g.createdAt); });",
+                  "    var sorted = times.slice().sort(function (a, b) { return b - a; });",
+                  "    pm.expect(times).to.eql(sorted);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "Any signed in user may browse. The freelancer shows a name only.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter gigs by category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Only gigs of that category return', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data).to.not.be.empty;",
+                  "    data.forEach(function (g) { pm.expect(g.category).to.eql('Gardening'); });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs?category=Gardening",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Gardening"
+                }
+              ]
+            },
+            "description": "The category filter narrows the browse list to one category.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a category that is not in the list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Names every field that failed', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "    var fields = body.errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['category']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs?category=Hacking",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Hacking"
+                }
+              ]
+            },
+            "description": "The query string follows the same allow list as the body.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search gigs by title without regard to case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The matching gig returns', function () {",
+                  "    var titles = pm.response.json().data.map(function (g) { return g.title; });",
+                  "    pm.expect(titles).to.include('Weekly house cleaning');",
+                  "    pm.expect(titles).to.not.include('Garden tidy up');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs?search=HOUSE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "HOUSE"
+                }
+              ]
+            },
+            "description": "The search matches part of a title, in any case.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search with regex characters does not error",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The characters match as plain text, so nothing matches', function () {",
+                  "    pm.expect(pm.response.json().count).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs?search=.*(",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ".*("
+                }
+              ]
+            },
+            "description": "The server escapes the text. Unescaped, \".*(\" is an invalid pattern that would raise a 500, or match every title.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a search longer than 50 characters",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Names every field that failed', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "    var fields = body.errors.map(function (e) { return e.field; });",
+                  "    pm.expect(fields).to.include.members(['search']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs?search=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                }
+              ]
+            },
+            "description": "A short limit keeps a hostile search from becoming a heavy pattern.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get the gig by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns the gig with the freelancer name', function () {",
+                  "    var gig = pm.response.json().data;",
+                  "    pm.expect(gig._id).to.eql(pm.environment.get('gigId'));",
+                  "    pm.expect(gig.freelancer.name).to.eql('Ethan Edwards');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{gigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{gigId}}"
+              ]
+            },
+            "description": "An active gig is open to anyone signed in.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A malformed id is refused with 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Uses the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Invalid id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/not-an-id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "not-an-id"
+              ]
+            },
+            "description": "The id check runs before any query, so the driver never reports a cast error.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A 12 character id is refused with 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/abcdefghijkl",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "abcdefghijkl"
+              ]
+            },
+            "description": "Mongoose accepts any 12 character string as an id. The API accepts only 24 hex characters.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "An unknown id returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Reports the gig as not found', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('Gig not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/000000000000000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "000000000000000000000000"
+              ]
+            },
+            "description": "A well formed id that matches no gig.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Client has no gigs of their own",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "mine"
+              ]
+            },
+            "description": "This route belongs to Freelancers. It also proves that \"mine\" is not read as an id.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List my gigs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns only gigs that Ethan owns', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data.length).to.be.at.least(2);",
+                  "    data.forEach(function (g) { pm.expect(g.freelancer).to.eql(pm.environment.get('ethanId')); });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "mine"
+              ]
+            },
+            "description": "The owner sees all of their own gigs.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update the gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Gig updated');",
+                  "});",
+                  "",
+                  "pm.test('Saves the new values and keeps the owner', function () {",
+                  "    var gig = pm.response.json().data;",
+                  "    pm.expect(gig.title).to.eql('Weekly deep cleaning');",
+                  "    pm.expect(gig.rate).to.eql(300);",
+                  "    pm.expect(gig.freelancer).to.eql(pm.environment.get('ethanId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{gigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{gigId}}"
+              ]
+            },
+            "description": "The owner replaces the gig fields.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Weekly deep cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": 300,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Another Freelancer cannot update the gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{gigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{gigId}}"
+              ]
+            },
+            "description": "Ownership sits in the query. Ndumsio gets 404, so the API does not reveal that the gig exists.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Weekly house cleaning\",\n  \"description\": \"Two hours of cleaning for a small flat.\",\n  \"category\": \"HouseCleaning\",\n  \"rate\": 1,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Another Freelancer cannot delete the gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{gigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{gigId}}"
+              ]
+            },
+            "description": "The same ownership rule applies to delete.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Client cannot delete the gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{gigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{gigId}}"
+              ]
+            },
+            "description": "A Client can never delete a gig, so this is 403.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The gig is unchanged after the refused requests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Still holds the update', function () {",
+                  "    var gig = pm.response.json().data;",
+                  "    pm.expect(gig.rate).to.eql(300);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{gigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{gigId}}"
+              ]
+            },
+            "description": "Proves the refused update and delete changed nothing.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The owner deactivates a gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The gig is inactive', function () {",
+                  "    pm.expect(pm.response.json().data.isActive).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{secondGigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{secondGigId}}"
+              ]
+            },
+            "description": "An owner hides a gig without deleting it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Garden tidy up\",\n  \"description\": \"Mowing and weeding for a small garden.\",\n  \"category\": \"Gardening\",\n  \"rate\": 400,\n  \"rateType\": \"Day\",\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "An inactive gig is hidden from the browse list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The inactive gig is missing', function () {",
+                  "    var ids = pm.response.json().data.map(function (g) { return g._id; });",
+                  "    pm.expect(ids).to.not.include(pm.environment.get('secondGigId'));",
+                  "    pm.expect(ids).to.include(pm.environment.get('gigId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "Only active gigs can be browsed or booked.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "An inactive gig is hidden from other users by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{secondGigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{secondGigId}}"
+              ]
+            },
+            "description": "A Client who guesses the id still gets 404.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The owner still sees the inactive gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The inactive gig is in the owner list', function () {",
+                  "    var ids = pm.response.json().data.map(function (g) { return g._id; });",
+                  "    pm.expect(ids).to.include(pm.environment.get('secondGigId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "mine"
+              ]
+            },
+            "description": "The owner needs the gig to reactivate it.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin can see an inactive gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The gig is inactive', function () {",
+                  "    pm.expect(pm.response.json().data.isActive).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{secondGigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{secondGigId}}"
+              ]
+            },
+            "description": "The Admin moderates every gig.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The owner deletes a gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Gig deleted');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{secondGigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{secondGigId}}"
+              ]
+            },
+            "description": "A Freelancer deletes their own gig.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The deleted gig is gone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{secondGigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{secondGigId}}"
+              ]
+            },
+            "description": "Even the Admin gets 404 once the gig is gone.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create a gig for the Admin to remove",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Stores the id', function () {",
+                  "    pm.environment.set('adminGigId', pm.response.json().data._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "Ndumsio owns this gig. The next request removes it as the Admin.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Leaking tap repair\",\n  \"description\": \"Repair a leaking kitchen tap.\",\n  \"category\": \"Plumbing\",\n  \"rate\": 500,\n  \"rateType\": \"Once\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin can delete any gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Gig deleted');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{adminGigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{adminGigId}}"
+              ]
+            },
+            "description": "The Admin is not the owner, and the delete still works.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Gigs need a signed in user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "The route sits behind authentication.",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Services",
       "description": "A service through its whole life: create, list, read, update, delete, confirm it is gone.",
       "item": [
         {
@@ -2181,7 +4068,7 @@
       ]
     },
     {
-      "name": "7. Clients",
+      "name": "8. Clients",
       "description": "A client record through its whole life, plus the malformed id case.",
       "item": [
         {
@@ -2552,7 +4439,7 @@
       ]
     },
     {
-      "name": "8. Freelancers",
+      "name": "9. Freelancers",
       "description": "A freelancer through its whole life. The embedded services list is validated entry by entry.",
       "item": [
         {
@@ -2942,7 +4829,7 @@
       ]
     },
     {
-      "name": "9. Invoices",
+      "name": "10. Invoices",
       "description": "An invoice through its whole life, including a nested proof of payment.",
       "item": [
         {
@@ -3335,7 +5222,7 @@
       ]
     },
     {
-      "name": "10. Pops",
+      "name": "11. Pops",
       "description": "A proof of payment through its whole life. The date defaults when it is left out.",
       "item": [
         {
@@ -3668,7 +5555,7 @@
       ]
     },
     {
-      "name": "11. Bookings",
+      "name": "12. Bookings",
       "description": "A booking through its whole life. Client, freelancer and service are embedded copies, so each one is validated as part of the booking.",
       "item": [
         {
@@ -4096,7 +5983,7 @@
       ]
     },
     {
-      "name": "12. The suite leaves no records behind",
+      "name": "13. The suite leaves no records behind",
       "description": "Every marketplace record the collection created was deleted by the folder that created it. These six checks prove it, so repeated runs do not fill the database. The five accounts remain, because the API has no endpoint that deletes a user: `npm run db:reset` is what clears those.",
       "item": [
         {
