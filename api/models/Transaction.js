@@ -50,6 +50,9 @@ export const transactionSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Index the freelancer so the income summary and the transaction list do not scan the collection.
+transactionSchema.index({ freelancer: 1, createdAt: -1 });
+
 // Block every update and delete query, because a financial record is append only.
 const BLOCKED = [
     'updateOne',
@@ -72,5 +75,6 @@ export default mongoose.model('Transaction', transactionSchema);
 
 /* ref
 https://mongoosejs.com/docs/middleware.html#pre
+https://mongoosejs.com/docs/guide.html#indexes
 https://nodejs.org/api/crypto.html#cryptorandomuuidoptions
 */
