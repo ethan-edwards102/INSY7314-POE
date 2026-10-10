@@ -2,7 +2,7 @@
   "info": {
     "name": "HustleHub+ API",
     "_postman_id": "f56b799b-197e-4b45-a617-493a430aaea3",
-    "description": "# HustleHub+ API, Part 1\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources. 170 requests in 16 folders, 733 assertions.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 16 confirms the suite deleted the records it should delete, and that bookings and transactions remain.",
+    "description": "# HustleHub+ API, Part 2\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources. 171 requests in 16 folders, 737 assertions.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 16 confirms the suite deleted the records it should delete, and that bookings and transactions remain.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -8144,6 +8144,75 @@
               ]
             },
             "description": "A self demotion could leave the system with no Admin, so the API refuses it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Client\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "An Admin cannot change their own role with an uppercase id",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('adminIdUpper', pm.environment.get('adminId').toUpperCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Explains the refusal', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('You cannot change your own role');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{adminIdUpper}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{adminIdUpper}}",
+                "role"
+              ]
+            },
+            "description": "An uppercase id casts to the same ObjectId, so the self change block must not compare the text exactly.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"role\": \"Client\"\n}",

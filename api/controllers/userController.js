@@ -10,8 +10,8 @@ export const updateUserRole = async (req, res) => {
     try {
         const { role } = req.validated;
 
-        // Block a self change so the last Admin cannot lock themselves out.
-        if (req.params.id === req.user.id) {
+        // Compare in lower case because an id in upper case casts to the same ObjectId.
+        if (req.params.id.toLowerCase() === req.user.id) {
             return fail(res, 400, 'You cannot change your own role');
         }
 
