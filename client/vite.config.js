@@ -42,6 +42,12 @@ export default defineConfig(({ mode }) => {
       port: 4173,
       https,
     },
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: './src/test/setup.js',
+      css: false,
+    },
   }
 })
 
@@ -50,4 +56,5 @@ https://vite.dev/config/server-options#server-proxy
 https://vite.dev/config/server-options#server-https
 https://vite.dev/config/shared-options#resolve-alias
 https://tailwindcss.com/docs/installation/using-vite
+https://vitest.dev/config/environment
 */
