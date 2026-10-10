@@ -89,10 +89,10 @@ in Part 2, so Part 1 is the M, E and N.
 
 | Tier | Technology | Version | Role in the system |
 |---|---|---|---|
-| **(M)** Database | MongoDB | 8.x | Stores users, services, bookings, invoices and proofs of payment |
-| **(E)** Framework | Express | 5.2 | HTTP routing, middleware pipeline, error boundary |
+| **(M)** Database | MongoDB | 8+ | Stores users, services, bookings, invoices and proofs of payment |
+| **(E)** Framework | Express | 5.3 | HTTP routing, middleware pipeline, error boundary |
 | **(R)** Frontend | React | | *Coming soon in Part 2* |
-| **(N)** Runtime | Node.js | 20+ | Runs the API as a single HTTPS process |
+| **(N)** Runtime | Node.js | 22+ (tested on 26) | Runs the API as a single HTTPS process |
 
 Node.js runs the API on a single thread and handles concurrent requests through
 an event loop that offloads I/O rather than blocking on it (OpenJS Foundation,
@@ -103,10 +103,10 @@ security controls are built on (OpenJS Foundation, n.d. e, n.d. h).
 
 | Package | Version | Why it is used |
 |---|---|---|
-| `mongoose` | 9.8 | Schema definitions, a second validation layer, and the bcrypt save hook |
+| `mongoose` | 9.11 | Schema definitions, a second validation layer, and the bcrypt save hook |
 | `bcryptjs` | 3.0 | Password hashing. Deliberately slow and adaptive |
 | `jsonwebtoken` | 9.0 | Signs and verifies the JWT that authenticates every protected request |
-| `dotenv` | 17.4 | Loads configuration from `.env`, which is never committed |
+| `dotenv` | 18.0 | Loads configuration from `.env`, which is never committed |
 | `selfsigned` | 5.5 | Generates the local TLS certificate in pure JavaScript, so no `openssl` is needed |
 | `newman` | 6.2 | Runs the Postman collection from the command line |
 
@@ -206,27 +206,31 @@ what the outside world is told.
 ```
 INSY7314-POE/
 |
-+-- server.js              HTTPS server, Mongo connection
-+-- app.js                 Express app, body limit, routers, error boundary
-+-- config/env.js          Startup validation of .env and the certificate
++-- api/                       The Express backend
+|   +-- server.js              HTTPS server, Mongo connection
+|   +-- app.js                 Express app, body limit, routers, error boundary
+|   +-- config/env.js          Startup validation of .env and the certificate
+|   |
+|   +-- routes/                URL to middleware chain to controller
+|   +-- middleware/            authenticate, authorize, validation, error handling
+|   +-- controllers/           One request each: read input, call model, respond
+|   +-- models/                Mongoose schemas, constraints, password hashing
+|   +-- utils/                 Response envelope, token signing, validation rules
+|   |
+|   +-- postman/               The 83 request test collection and its environment
+|   +-- screenshots/           API response screenshots used in this README
+|   +-- scripts/               certs, seed:admin, db:reset, test:api
+|   |
+|   +-- .env.example           Template of every variable, committed, no real values
+|   +-- .env                   Real secrets and connection string      NOT COMMITTED
+|   +-- certs/                 localhost-key.pem, localhost-cert.pem   NOT COMMITTED
+|   +-- node_modules/          Installed by npm install                NOT COMMITTED
+|   +-- package.json           Dependencies and the npm run scripts
+|   +-- package-lock.json      Exact dependency versions, committed on purpose
 |
-+-- routes/                URL to middleware chain to controller
-+-- middleware/            authenticate, authorize, validation, error handling
-+-- controllers/           One request each: read input, call model, respond
-+-- models/                Mongoose schemas, constraints, password hashing
-+-- utils/                 Response envelope, token signing, validation rules
-|
-+-- postman/               The 83 request test collection and its environment
-+-- scripts/               certs, seed:admin, db:reset, test:api
-|
-+-- .env.example           Template of every variable, committed, no real values
-+-- .env                   Real secrets and connection string      NOT COMMITTED
-+-- certs/                 localhost-key.pem, localhost-cert.pem   NOT COMMITTED
-+-- node_modules/          Installed by npm install                NOT COMMITTED
-|
-+-- .gitignore             Keeps .env, certs/ and node_modules/ out of the repo
-+-- package.json           Dependencies and the npm run scripts
-+-- package-lock.json      Exact dependency versions, committed on purpose
++-- client/                    The React frontend (Part 2), with its own screenshots/
++-- package.json               Shortcut scripts that run api/ and client/ from the root
++-- .gitignore                 Keeps .env, certs/ and node_modules/ out of the repo
 ```
 
 Each directory is one layer with one responsibility, so that a change to
@@ -762,7 +766,7 @@ Every instruction works identically on Windows, macOS and Linux. Nothing needs
 
 | Requirement | Version | Check with |
 |---|---|---|
-| Node.js | 20 or newer | `node --version` |
+| Node.js | 22 or newer | `node --version` |
 | npm | 10 or newer | `npm --version` |
 | MongoDB Community Server | 6 or newer | `mongod --version` |
 | Postman | any recent | optional, `npm run test:api` runs the suite without it |
@@ -779,9 +783,12 @@ Every instruction works identically on Windows, macOS and Linux. Nothing needs
 
 ```bash
 git clone https://github.com/ethan-edwards102/INSY7314-POE.git
-cd INSY7314-POE
+cd INSY7314-POE/api
 npm install
 ```
+
+The backend lives in `api/`. Run every command in this section and in
+[Testing](#8-testing) from inside `api/`.
 
 ### 6.3 Configure
 
@@ -1152,7 +1159,7 @@ rather than a confusing test failure. It then injects `baseUrl`, `adminEmail` an
 `adminPassword` from `.env`, which is why the admin password is not stored in the
 collection file.
 
-**In the Postman app.** Import both files from `postman/`:
+**In the Postman app.** Import both files from `api/postman/`:
 
 1. `HustleHub-Plus.postman_collection.json`, the 83 requests.
 2. `HustleHub-Plus.postman_environment.json`, the environment.
@@ -1317,34 +1324,34 @@ producing a token:
 | 10 | The Newman summary showing 401 of 401 passing | The full suite passes |
 
 **1. Registration works and issues a JWT**
-![POST /auth/register returning 201 with a token](docs/1.png)
+![POST /auth/register returning 201 with a token](api/screenshots/1.png)
 
 **2. Login works and issues a JWT**
-![POST /auth/login returning 200 with a token](docs/2.png)
+![POST /auth/login returning 200 with a token](api/screenshots/2.png)
 
 **3. Uniqueness enforced by the database**
-![Duplicate registration returning 409](docs/3.png)
+![Duplicate registration returning 409](api/screenshots/3.png)
 
 **4. Identical message, no account enumeration**
-![Wrong password returning 401](docs/4.png)
+![Wrong password returning 401](api/screenshots/4.png)
 
 **5. Every bad field reported at once**
-![Validation failure returning 400 with the errors array](docs/5.png)
+![Validation failure returning 400 with the errors array](api/screenshots/5.png)
 
 **6. The JWT is required, not optional**
-![A protected route with no token returning 401](docs/6.png)
+![A protected route with no token returning 401](api/screenshots/6.png)
 
 **7. Signature verification cannot be bypassed**
-![A forged Admin token returning 401](docs/7.png)
+![A forged Admin token returning 401](api/screenshots/7.png)
 
 **8. No plaintext password is stored**
-![Compass showing bcrypt hashes in users](docs/8.png)
+![Compass showing bcrypt hashes in users](api/screenshots/8.png)
 
 **9. The API is served over TLS**
-![The certificate warning on https://localhost:5001](docs/9.png)
+![The certificate warning on https://localhost:5001](api/screenshots/9.png)
 
 **10. The full suite passes**
-![The Newman summary showing 401 of 401 passing](docs/10.png)
+![The Newman summary showing 401 of 401 passing](api/screenshots/10.png)
 
 ---
 
