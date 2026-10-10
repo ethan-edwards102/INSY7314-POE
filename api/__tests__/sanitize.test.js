@@ -112,6 +112,12 @@ describe('free text stripping', () => {
         expect(stripHtml('Ages 5 < 10')).toBe('Ages 5 < 10');
     });
 
+    test('strips encoded markup instead of decoding it into a live tag', () => {
+        expect(stripHtml('&lt;img src=x onerror=alert(1)&gt;Lawn care')).toBe('Lawn care');
+        expect(stripHtml('&#60;script&#62;alert(1)&#60;/script&#62;')).toBe('');
+        expect(stripHtml('&amp;lt;b&amp;gt;Lawn')).toBe('Lawn');
+    });
+
     test('counts an angle bracket as one character toward the title limit', () => {
         expect(checkRules({ ...gig, title: `${'>'.repeat(80)}` }, GIG_RULES)).toEqual([]);
     });

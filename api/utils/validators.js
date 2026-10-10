@@ -11,12 +11,21 @@ export const SELF_SERVICE_ROLES = USER_ROLES.filter((role) => role !== 'Admin');
 
 const ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>' };
 
-// Remove every tag, then restore the escaped text in one pass, so "Rates > R500" stays readable.
-export const stripHtml = (value) =>
-    sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).replace(
-        /&(?:amp|lt|gt);/g,
-        (entity) => ENTITIES[entity]
-    );
+// Strip again after each decode, because encoded markup becomes a live tag once decoded.
+export const stripHtml = (value) => {
+    let previous;
+    let current = value;
+
+    do {
+        previous = current;
+        current = sanitizeHtml(previous, { allowedTags: [], allowedAttributes: {} }).replace(
+            /&(?:amp|lt|gt);/g,
+            (entity) => ENTITIES[entity]
+        );
+    } while (current !== previous);
+
+    return current;
+};
 
 // Treat undefined, null, and a string of only spaces as "not supplied".
 const isMissing = (value) =>

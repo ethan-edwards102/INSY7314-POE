@@ -1,4 +1,3 @@
-// Escape only the ASCII pattern characters, because MongoDB rejects the \u escapes that RegExp.escape writes.
 export const buildBrowseFilter = ({ category, search } = {}) => {
     const filter = { isActive: true };
 
@@ -7,6 +6,7 @@ export const buildBrowseFilter = ({ category, search } = {}) => {
     }
 
     if (search) {
+        // Escape the pattern characters so the text matches itself and MongoDB accepts the pattern.
         filter.title = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     }
 
