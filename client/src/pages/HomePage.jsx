@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { apiRequest } from '@/services/api'
 
 export default function HomePage() {
@@ -33,9 +34,9 @@ export default function HomePage() {
         API status: <strong>{status === 'checking' ? 'Checking...' : status === 'online' ? 'Online' : 'Offline'}</strong>
       </p>
       <div>
-        <button type="button" onClick={checkApi} disabled={status === 'checking'}>
+        <Button onClick={checkApi} disabled={status === 'checking'}>
           Check again
-        </button>
+        </Button>
       </div>
     </main>
   )
@@ -43,4 +44,5 @@ export default function HomePage() {
 
 /* ref
 https://react.dev/reference/react/useEffect#fetching-data-with-effects
+https://ui.shadcn.com/docs/installation/vite
 */

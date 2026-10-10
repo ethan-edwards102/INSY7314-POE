@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 
@@ -19,7 +20,7 @@ export default defineConfig(({ mode }) => {
   const apiTarget = env.API_PROXY_TARGET || 'https://localhost:5001'
 
   return {
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
     resolve: {
       alias: { '@': path.resolve(root, './src') },
     },
@@ -48,4 +49,5 @@ export default defineConfig(({ mode }) => {
 https://vite.dev/config/server-options#server-proxy
 https://vite.dev/config/server-options#server-https
 https://vite.dev/config/shared-options#resolve-alias
+https://tailwindcss.com/docs/installation/using-vite
 */
