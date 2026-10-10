@@ -30,6 +30,11 @@ export const errorHandler = (error, req, res, next) => {
         return fail(res, 413, 'Request body is too large');
     }
 
+    // Answer a client fault from the body parser, such as a bad charset, without a server error log.
+    if (error.expose === true && error.status >= 400 && error.status < 500) {
+        return fail(res, error.status, 'Request body could not be read');
+    }
+
     logServerError(error);
 
     return fail(res, 500, 'An unexpected error occurred');

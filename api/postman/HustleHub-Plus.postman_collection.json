@@ -893,6 +893,57 @@
           }
         },
         {
+          "name": "An unsupported charset is a client error, not a server fault",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 415', function () {",
+                  "    pm.response.to.have.status(415);",
+                  "});",
+                  "",
+                  "pm.test('Answers with a fixed message and no parser detail', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Request body could not be read');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json; charset=latin1"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "The body parser rejects the charset before any route runs. The API must answer 415 with a fixed message, not a 500.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"a@hustlehub.test\",\n  \"password\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
           "name": "Oversized body is rejected",
           "event": [
             {
