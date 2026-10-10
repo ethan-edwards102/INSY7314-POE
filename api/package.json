@@ -9,7 +9,9 @@
     "test:api": "node scripts/run-tests.mjs",
     "seed:admin": "node scripts/seed-admin.mjs",
     "db:reset": "node scripts/reset-db.mjs && npm run seed:admin",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
   },
   "repository": {
     "type": "git",
@@ -34,6 +36,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.12.0",
     "globals": "^17.13.0",
+    "jest": "^30.5.2",
     "newman": "^6.2.3",
     "selfsigned": "^5.5.0"
   },
