@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Booking from '../models/Booking.js';
 import Gig from '../models/Gig.js';
 import Transaction from '../models/Transaction.js';
@@ -8,7 +9,12 @@ export const computeTotal = (unitRate, quantity) => Math.round(unitRate * quanti
 // Return null when the gig is not open to this client, so the caller answers 404.
 export const createBooking = async (clientId, { gig: gigId, scheduledFor, quantity }) => {
     // Refuse an inactive gig and the own gig of the caller.
-    const gig = await Gig.findOne({ _id: gigId, isActive: true, freelancer: { $ne: clientId } });
+    // Mark the operator as trusted, because sanitizeFilter wraps any other operator object.
+    const gig = await Gig.findOne({
+        _id: gigId,
+        isActive: true,
+        freelancer: mongoose.trusted({ $ne: clientId }),
+    });
 
     if (!gig) {
         return null;
@@ -43,4 +49,5 @@ export const createBooking = async (clientId, { gig: gigId, scheduledFor, quanti
 
 /* ref
 https://www.mongodb.com/docs/manual/core/transactions/
+https://mongoosejs.com/docs/api/mongoose.html#Mongoose.prototype.trusted()
 */

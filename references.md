@@ -35,3 +35,5 @@
 - https://mongoosejs.com/docs/api/query.html#Query.prototype.lean()
 - https://github.com/apostrophecms/apostrophe/tree/main/packages/sanitize-html
 - https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
+- https://mongoosejs.com/docs/api/mongoose.html#Mongoose.prototype.trusted()
+- https://mongoosejs.com/docs/api/mongoose.html#Mongoose.prototype.set()

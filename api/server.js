@@ -9,6 +9,9 @@ import Gig from './models/Gig.js';
 import Booking from './models/Booking.js';
 import Transaction from './models/Transaction.js';
 
+// Neutralise a query operator that reaches a filter, as a second layer after the request sanitiser.
+mongoose.set('sanitizeFilter', true);
+
 await mongoose.connect(config.mongoUri);
 console.log('Connected to MongoDB');
 
@@ -18,3 +21,7 @@ await Promise.all([User.init(), Gig.init(), Booking.init(), Transaction.init()])
 https.createServer(config.ssl, app).listen(config.port, () => {
     console.log(`Server started on https://localhost:${config.port}`);
 });
+
+/* ref
+https://mongoosejs.com/docs/api/mongoose.html#Mongoose.prototype.set()
+*/
