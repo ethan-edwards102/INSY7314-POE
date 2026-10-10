@@ -6,6 +6,7 @@ import freelancerRoutes from './routes/freelancerRoutes.js';
 import gigRoutes from './routes/gigRoutes.js';
 import invoiceRoutes from './routes/invoiceRoutes.js';
 import popRoutes from './routes/popRoutes.js';
+import transactionRoutes from './routes/transactionRoutes.js';
 import serviceRoutes from './routes/serviceRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
@@ -28,6 +29,7 @@ app.use('/gigs', gigRoutes);
 app.use('/invoices', invoiceRoutes);
 app.use('/pops', popRoutes);
 app.use('/services', serviceRoutes);
+app.use('/transactions', transactionRoutes);
 app.use('/users', userRoutes);
 
 // Register these after the routes. This way, they only see a request that
