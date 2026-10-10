@@ -9096,6 +9096,71 @@
               ]
             }
           }
+        },
+        {
+          "name": "Failed logins spread over many emails are blocked",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('sprayCount') === undefined || pm.environment.get('sprayCount') === '') {",
+                  "    pm.environment.set('sprayCount', 0);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var attempts = Number(pm.environment.get('sprayCount')) + 1;",
+                  "pm.environment.set('sprayCount', attempts);",
+                  "",
+                  "if (pm.response.code !== 429 && attempts < 40) {",
+                  "    pm.execution.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "    pm.environment.unset('sprayCount');",
+                  "    pm.test('The IP limiter blocks the spray, though every email was tried only once', function () {",
+                  "        pm.response.to.have.status(429);",
+                  "        pm.expect(pm.response.json().message).to.match(/^Too many login attempts\\. Try again in \\d+ minutes\\.$/);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Password spraying tries one guess per account, so the email limiter never fires. The limiter for the IP address stops it. The loop stops at the first 429, or after 40 tries.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"spray.{{sprayCount}}@hustlehub.test\",\n  \"password\": \"Wrong!Pass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         }
       ],
       "description": "Failed logins and repeated bookings end in a 429. Run this folder last, because it uses up limiter counters."

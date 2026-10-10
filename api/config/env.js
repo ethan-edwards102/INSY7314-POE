@@ -82,6 +82,24 @@ const origins = (process.env.CLIENT_ORIGIN?.trim() || 'https://localhost:5173')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+// Reject an origin with a path, a trailing slash or a scheme other than https, because it never matches.
+const isOrigin = (value) => {
+    try {
+        const url = new URL(value);
+
+        return url.protocol === 'https:' && url.origin === value;
+    } catch {
+        return false;
+    }
+};
+
+const badOrigins = origins.filter((origin) => !isOrigin(origin));
+
+if (badOrigins.length > 0) {
+    console.error(`CLIENT_ORIGIN must hold https origins with no path or trailing slash. Found: ${badOrigins.join(', ')}`);
+    process.exit(1);
+}
+
 // Export the config object. Other modules in the application use it.
 export const config = {
     port: process.env.PORT,
@@ -95,6 +113,10 @@ export const config = {
         login: {
             windowMinutes: positiveInteger('RATE_LIMIT_LOGIN_WINDOW_MINUTES', 15),
             max: positiveInteger('RATE_LIMIT_LOGIN_MAX', 5),
+        },
+        loginIp: {
+            windowMinutes: positiveInteger('RATE_LIMIT_LOGIN_IP_WINDOW_MINUTES', 15),
+            max: positiveInteger('RATE_LIMIT_LOGIN_IP_MAX', 20),
         },
         register: {
             windowMinutes: positiveInteger('RATE_LIMIT_REGISTER_WINDOW_MINUTES', 60),
@@ -110,3 +132,7 @@ export const config = {
         cert: fs.readFileSync(certificate.certPath),
     },
 };
+
+/* ref
+https://developer.mozilla.org/en-US/docs/Web/API/URL/origin
+*/

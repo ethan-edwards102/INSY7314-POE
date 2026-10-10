@@ -18,6 +18,11 @@ const { rateLimits } = config;
 
 export const globalLimiter = buildLimiter(rateLimits.global, 'requests');
 
+// Count failed logins of one IP across all emails, so password spraying with one guess per account still stops.
+export const loginIpLimiter = buildLimiter(rateLimits.loginIp, 'login attempts', {
+    skipSuccessfulRequests: true,
+});
+
 // Count failed logins only, so a correct login never uses up an attempt.
 // Include the email so one attacker cannot lock out every account behind a shared IP.
 export const loginLimiter = buildLimiter(rateLimits.login, 'login attempts', {
