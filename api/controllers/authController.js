@@ -57,3 +57,18 @@ export const login = async (req, res) => {
         return handleError(res, error);
     }
 };
+
+// Read the user again, because the token only holds the id.
+export const me = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return fail(res, 401, 'Invalid token');
+        }
+
+        return ok(res, 'User retrieved', user);
+    } catch (error) {
+        return handleError(res, error);
+    }
+};
