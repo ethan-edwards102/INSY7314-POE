@@ -1,5 +1,6 @@
 import { NAME_PATTERN, EMAIL_PATTERN, PASSWORD_PATTERN, USER_ROLES } from '../models/User.js';
 import { SERVICE_CATEGORIES, RATE_TYPES } from '../models/Service.js';
+import { GIG_CATEGORIES } from '../models/Gig.js';
 
 // Users, clients and freelancers share this message.
 const NAME_MESSAGE = 'Name must be 2-50 letters and may contain spaces, hyphens and apostrophes';
@@ -19,7 +20,10 @@ const isMissing = (value) =>
 // as { "email": { "$ne": null } } arrives as an object. If this object went
 // into a Mongoose query, an attacker could match a document without knowing
 // the real value. This function rejects any value that is not a plain string.
-export const checkString = (value, { field, label, pattern, message, allowed, trim = true, required = true }) => {
+export const checkString = (
+    value,
+    { field, label, pattern, message, allowed, minLength, maxLength, trim = true, required = true }
+) => {
     if (isMissing(value)) {
         return required ? { field, message: `${label} is required` } : null;
     }
@@ -32,6 +36,14 @@ export const checkString = (value, { field, label, pattern, message, allowed, tr
 
     if (allowed && !allowed.includes(candidate)) {
         return { field, message: `${label} must be one of: ${allowed.join(', ')}` };
+    }
+
+    if (minLength !== undefined && candidate.length < minLength) {
+        return { field, message: `${label} must be at least ${minLength} characters` };
+    }
+
+    if (maxLength !== undefined && candidate.length > maxLength) {
+        return { field, message: `${label} must be ${maxLength} characters or fewer` };
     }
 
     if (pattern && !pattern.test(candidate)) {
@@ -130,12 +142,27 @@ export const checkDate = (value, { field, label, required = true }) => {
     return null;
 };
 
+// Accept only a real boolean. The string "false" is truthy in many checks, so
+// the function rejects it instead of guessing.
+export const checkBoolean = (value, { field, label, required = true }) => {
+    if (value === undefined || value === null) {
+        return required ? { field, message: `${label} is required` } : null;
+    }
+
+    if (typeof value !== 'boolean') {
+        return { field, message: `${label} must be true or false` };
+    }
+
+    return null;
+};
+
 // Pick the checker that a rule names. If a rule has no type, treat the
 // field as a string.
 const CHECKERS = {
     string: checkString,
     number: checkNumber,
     date: checkDate,
+    boolean: checkBoolean,
 };
 
 // Run a rule table. Return every problem found. For a nested object or
@@ -266,4 +293,23 @@ export const BOOKING_RULES = {
     client: { field: 'client', label: 'Client', type: 'object', rules: CLIENT_RULES },
     freelancer: { field: 'freelancer', label: 'Freelancer', type: 'object', rules: FREELANCER_RULES },
     service: { field: 'service', label: 'Service', type: 'object', rules: SERVICE_RULES },
+};
+
+// The server sets the owner, so the table has no freelancer field. A later
+// stage adds a freeText flag to title and description to strip HTML.
+export const GIG_RULES = {
+    title: { field: 'title', label: 'Title', minLength: 3, maxLength: 80 },
+    description: { field: 'description', label: 'Description', minLength: 10, maxLength: 1000 },
+    category: { field: 'category', label: 'Category', allowed: GIG_CATEGORIES },
+    // The smallest rate is 0.01, because a gig must cost more than nothing.
+    rate: { field: 'rate', label: 'Rate', type: 'number', min: 0.01, max: 100000 },
+    rateType: { field: 'rateType', label: 'Rate type', allowed: RATE_TYPES },
+    isActive: { field: 'isActive', label: 'Active flag', type: 'boolean', required: false },
+};
+
+// Browse filters arrive in the query string. The search text stays short
+// because the server turns it into a pattern.
+export const GIG_QUERY_RULES = {
+    category: { field: 'category', label: 'Category', allowed: GIG_CATEGORIES, required: false },
+    search: { field: 'search', label: 'Search', maxLength: 50, required: false },
 };
