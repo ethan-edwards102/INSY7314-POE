@@ -3,9 +3,10 @@ import helmet from 'helmet';
 import { config } from '../config/env.js';
 import { isAllowedOrigin } from '../utils/isAllowedOrigin.js';
 
-// This API sends JSON only, so the policy blocks every resource type and every embedding.
+// This API sends JSON only, so drop the Helmet defaults that allow scripts and styles.
 export const securityHeaders = helmet({
     contentSecurityPolicy: {
+        useDefaults: false,
         directives: {
             defaultSrc: ["'none'"],
             frameAncestors: ["'none'"],
@@ -13,6 +14,8 @@ export const securityHeaders = helmet({
             formAction: ["'none'"],
         },
     },
+    // Match frame-ancestors for older browsers that ignore the CSP.
+    xFrameOptions: { action: 'deny' },
     crossOriginResourcePolicy: { policy: 'same-site' },
     strictTransportSecurity: true,
 });

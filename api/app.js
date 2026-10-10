@@ -13,16 +13,17 @@ import { ok } from './utils/respond.js';
 
 const app = express();
 
-// Hide the framework name from an attacker. Helmet also removes the header.
+// Hide the framework name from an attacker, even if a later change removes Helmet.
 app.disable('x-powered-by');
 
+// Keep this order: headers, CORS, limiter, parser, sanitiser, routes, then error handlers.
 // Set the security headers first so every response carries them, including an error.
 app.use(securityHeaders);
 
-// Answer a preflight request here, before the limiter, so a browser check never uses a request allowance.
+// Answer an allowed preflight here, before the limiter, so a browser check from the client uses no allowance.
 app.use(corsPolicy);
 
-// Count every request first so a flood stops before any parsing or database work.
+// Count each request before any parsing so a flood stops before database work.
 app.use(globalLimiter);
 
 // Limit the payload size. This stops an attacker from using a large
