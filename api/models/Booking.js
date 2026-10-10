@@ -69,3 +69,9 @@ bookingSchema.index({ freelancer: 1, createdAt: -1 });
 bookingSchema.index({ gig: 1 });
 
 export default mongoose.model('Booking', bookingSchema);
+
+/* ref
+https://mongoosejs.com/docs/guide.html#indexes
+https://mongoosejs.com/docs/guide.html#timestamps
+https://mongoosejs.com/docs/validation.html#custom-validators
+*/

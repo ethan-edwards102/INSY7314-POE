@@ -40,3 +40,7 @@ export const createBooking = async (clientId, { gig: gigId, scheduledFor, quanti
         throw error;
     }
 };
+
+/* ref
+https://www.mongodb.com/docs/manual/core/transactions/
+*/

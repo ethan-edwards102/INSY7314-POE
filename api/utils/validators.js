@@ -127,10 +127,7 @@ export const checkNumber = (value, { field, label, min, max, integer = false, re
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// A date arrives as a string. This function parses the string. If the
-// function cannot read the date, it returns a 400 error that names the
-// field, not a CastError. The optional "future" and "maxDaysAhead" rules
-// keep a date inside the window that a booking allows.
+// Return an error that names the field, so a bad date never reaches Mongoose as a CastError.
 export const checkDate = (value, { field, label, required = true, future = false, maxDaysAhead }, now = Date.now()) => {
     if (isMissing(value)) {
         return required ? { field, message: `${label} is required` } : null;

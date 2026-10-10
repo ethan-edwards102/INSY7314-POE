@@ -24,5 +24,9 @@
 - https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/escape
 - https://mongoosejs.com/docs/populate.html#field-selection
 - https://expressjs.com/en/5x/api/request/#reqquery
-https://mongoosejs.com/docs/middleware.html#pre
-https://nodejs.org/api/crypto.html#cryptorandomuuidoptions
+- https://mongoosejs.com/docs/middleware.html#pre
+- https://nodejs.org/api/crypto.html#cryptorandomuuidoptions
+- https://mongoosejs.com/docs/validation.html#custom-validators
+- https://mongoosejs.com/docs/api/model.html#Model.exists()
+- https://www.mongodb.com/docs/manual/reference/operator/query/or/
+- https://www.mongodb.com/docs/manual/core/transactions/

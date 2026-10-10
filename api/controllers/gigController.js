@@ -111,4 +111,5 @@ export const deleteGig = async (req, res) => {
 
 /* ref
 https://mongoosejs.com/docs/populate.html#field-selection
+https://mongoosejs.com/docs/api/model.html#Model.exists()
 */

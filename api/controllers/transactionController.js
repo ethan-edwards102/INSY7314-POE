@@ -29,3 +29,7 @@ export const getTransactionById = async (req, res) => {
         return handleError(res, error);
     }
 };
+
+/* ref
+https://mongoosejs.com/docs/populate.html#field-selection
+*/

@@ -7,7 +7,7 @@ export const listScope = (user) => {
     return user.role === 'Client' ? { client: user.id } : { freelancer: user.id };
 };
 
-// Build the single record filter. A person outside the record gets no match, so the route answers 404.
+// Match only a record where the caller is a party, so a stranger gets 404.
 export const partyScope = (user) => {
     if (user.role === 'Admin') {
         return {};
@@ -15,3 +15,7 @@ export const partyScope = (user) => {
 
     return { $or: [{ client: user.id }, { freelancer: user.id }] };
 };
+
+/* ref
+https://www.mongodb.com/docs/manual/reference/operator/query/or/
+*/
