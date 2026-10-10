@@ -1,14 +1,9 @@
 import express from 'express';
 import authRoutes from './routes/authRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
-import clientRoutes from './routes/clientRoutes.js';
-import freelancerRoutes from './routes/freelancerRoutes.js';
 import gigRoutes from './routes/gigRoutes.js';
 import incomeRoutes from './routes/incomeRoutes.js';
-import invoiceRoutes from './routes/invoiceRoutes.js';
-import popRoutes from './routes/popRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
-import serviceRoutes from './routes/serviceRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 import { ok } from './utils/respond.js';
@@ -24,13 +19,8 @@ app.get('/health', (req, res) => ok(res, 'OK'));
 
 app.use('/auth', authRoutes);
 app.use('/bookings', bookingRoutes);
-app.use('/clients', clientRoutes);
-app.use('/freelancers', freelancerRoutes);
 app.use('/gigs', gigRoutes);
 app.use('/income', incomeRoutes);
-app.use('/invoices', invoiceRoutes);
-app.use('/pops', popRoutes);
-app.use('/services', serviceRoutes);
 app.use('/transactions', transactionRoutes);
 app.use('/users', userRoutes);
 

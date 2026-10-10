@@ -9,7 +9,7 @@ field never reaches the database.
 */
 
 // Return a middleware. This lets a route name its rule table, for example
-// validateBody(SERVICE_RULES).
+// validateBody(GIG_RULES).
 export const validateBody = (rules) => {
     return (req, res, next) => {
         // req.body is undefined when the request has no body, or when the

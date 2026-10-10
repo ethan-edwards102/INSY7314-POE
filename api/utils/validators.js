@@ -1,10 +1,8 @@
 import { NAME_PATTERN, EMAIL_PATTERN, PASSWORD_PATTERN, USER_ROLES } from '../models/User.js';
-import { SERVICE_CATEGORIES, RATE_TYPES } from '../models/Service.js';
 import { GIG_CATEGORIES, RATE_TYPES as GIG_RATE_TYPES } from '../models/Gig.js';
 import { MAX_QUANTITY } from '../models/Booking.js';
 import { OBJECT_ID_PATTERN } from '../middleware/validateObjectId.js';
 
-// Users, clients and freelancers share this message.
 const NAME_MESSAGE = 'Name must be 2-50 letters and may contain spaces, hyphens and apostrophes';
 
 // Remove the Admin role. This stops a user from giving themselves the Admin role.
@@ -190,22 +188,13 @@ const CHECKERS = {
     boolean: checkBoolean,
 };
 
-// Run a rule table. Return every problem found. For a nested object or
-// array, the error path shows the location, for example
-// 'service.category' or 'services[0].rate'.
+// Run a rule table. Return every problem found.
 export const checkRules = (source, rules) => {
     const errors = [];
     const body = source ?? {};
 
     for (const rule of Object.values(rules)) {
-        const value = body[rule.field];
-
-        if (rule.type === 'object' || rule.type === 'array') {
-            errors.push(...checkNested(value, rule));
-            continue;
-        }
-
-        const error = CHECKERS[rule.type ?? 'string'](value, rule);
+        const error = CHECKERS[rule.type ?? 'string'](body[rule.field], rule);
 
         if (error) {
             errors.push(error);
@@ -215,37 +204,7 @@ export const checkRules = (source, rules) => {
     return errors;
 };
 
-const prefix = (errors, path) => errors.map((error) => ({ ...error, field: `${path}${error.field}` }));
-
-const checkNested = (value, rule) => {
-    const { field, label, rules, of, required = true } = rule;
-
-    if (value === undefined || value === null) {
-        return required ? [{ field, message: `${label} is required` }] : [];
-    }
-
-    if (rule.type === 'array') {
-        if (!Array.isArray(value)) {
-            return [{ field, message: `${label} must be a list` }];
-        }
-
-        return value.flatMap((entry, index) =>
-            typeof entry === 'object' && entry !== null && !Array.isArray(entry)
-                ? prefix(checkRules(entry, of), `${field}[${index}].`)
-                : [{ field: `${field}[${index}]`, message: `${label} must contain objects` }]
-        );
-    }
-
-    if (typeof value !== 'object' || Array.isArray(value)) {
-        return [{ field, message: `${label} must be an object` }];
-    }
-
-    return prefix(checkRules(value, rules), `${field}.`);
-};
-
-// Rebuild the body from the rule table only, at every level of nesting.
-// This function drops any field that is not in the rule table. It does not
-// pass an undeclared field to Mongoose.
+// Rebuild the body from the rule table only, so an undeclared field never reaches Mongoose.
 export const pickValidated = (source, rules) => {
     const validated = {};
     const body = source ?? {};
@@ -253,19 +212,12 @@ export const pickValidated = (source, rules) => {
     for (const rule of Object.values(rules)) {
         const value = body[rule.field];
 
-        // The checkers above treat null as "not supplied". For the same
-        // reason, this function drops a null value here. It does not pass
-        // the null to Mongoose, which would report it in its own wording,
-        // or, for a list, try to map over the null value.
+        // Drop a null value, because the checkers treat null as a field that is not supplied.
         if (value === undefined || value === null) {
             continue;
         }
 
-        if (rule.type === 'object') {
-            validated[rule.field] = pickValidated(value, rule.rules);
-        } else if (rule.type === 'array') {
-            validated[rule.field] = value.map((entry) => pickValidated(entry, rule.of));
-        } else if (typeof value === 'string' && rule.trim !== false) {
+        if (typeof value === 'string' && rule.trim !== false) {
             validated[rule.field] = value.trim();
         } else {
             validated[rule.field] = value;
@@ -275,40 +227,13 @@ export const pickValidated = (source, rules) => {
     return validated;
 };
 
-// These are the rule tables for the six marketplace resources. Each table
+// These are the rule tables for the marketplace resources. Each table
 // matches the requirements of its schema.
 
 // Every role is allowed here, including Admin. requireRole('Admin') on the
 // route makes this safe, not a restricted set of values.
 export const ROLE_RULES = {
     role: { field: 'role', label: 'Role', allowed: USER_ROLES },
-};
-
-export const CLIENT_RULES = {
-    name: { field: 'name', label: 'Name', pattern: NAME_PATTERN, message: NAME_MESSAGE },
-};
-
-export const SERVICE_RULES = {
-    category: { field: 'category', label: 'Category', allowed: SERVICE_CATEGORIES },
-    rate: { field: 'rate', label: 'Rate', type: 'number', min: 0 },
-    rateType: { field: 'rateType', label: 'Rate type', allowed: RATE_TYPES },
-};
-
-export const FREELANCER_RULES = {
-    name: { field: 'name', label: 'Name', pattern: NAME_PATTERN, message: NAME_MESSAGE },
-    // This field is optional. If the request supplies a list, this function
-    // checks each entry as a service.
-    services: { field: 'services', label: 'Services', type: 'array', of: SERVICE_RULES, required: false },
-};
-
-export const POP_RULES = {
-    datePaid: { field: 'datePaid', label: 'Date paid', type: 'date', required: false },
-};
-
-export const INVOICE_RULES = {
-    amount: { field: 'amount', label: 'Amount', type: 'number', min: 0 },
-    dateIssued: { field: 'dateIssued', label: 'Date issued', type: 'date', required: false },
-    pop: { field: 'pop', label: 'Proof of payment', type: 'object', rules: POP_RULES, required: false },
 };
 
 // The table has no client, freelancer or total field, because the server sets them.
