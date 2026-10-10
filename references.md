@@ -33,3 +33,5 @@
 - https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateToString/
 - https://mongoosejs.com/docs/api/model.html#Model.aggregate()
 - https://mongoosejs.com/docs/api/query.html#Query.prototype.lean()
+- https://github.com/apostrophecms/apostrophe/tree/main/packages/sanitize-html
+- https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html

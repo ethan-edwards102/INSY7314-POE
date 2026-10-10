@@ -1,3 +1,4 @@
+import sanitizeHtml from 'sanitize-html';
 import { NAME_PATTERN, EMAIL_PATTERN, PASSWORD_PATTERN, USER_ROLES } from '../models/User.js';
 import { GIG_CATEGORIES, RATE_TYPES as GIG_RATE_TYPES } from '../models/Gig.js';
 import { MAX_QUANTITY } from '../models/Booking.js';
@@ -7,6 +8,10 @@ const NAME_MESSAGE = 'Name must be 2-50 letters and may contain spaces, hyphens 
 
 // Remove the Admin role. This stops a user from giving themselves the Admin role.
 export const SELF_SERVICE_ROLES = USER_ROLES.filter((role) => role !== 'Admin');
+
+// Remove every tag and attribute. Restore the ampersand so "Mowing & edging" stays readable.
+export const stripHtml = (value) =>
+    sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).replaceAll('&amp;', '&');
 
 // Treat undefined, null, and a string of only spaces as "not supplied".
 const isMissing = (value) =>
@@ -22,7 +27,7 @@ const isMissing = (value) =>
 // the real value. This function rejects any value that is not a plain string.
 export const checkString = (
     value,
-    { field, label, pattern, message, allowed, minLength, maxLength, trim = true, required = true }
+    { field, label, pattern, message, allowed, minLength, maxLength, trim = true, required = true, freeText = false }
 ) => {
     if (isMissing(value)) {
         return required ? { field, message: `${label} is required` } : null;
@@ -32,7 +37,9 @@ export const checkString = (
         return { field, message: `${label} must be text` };
     }
 
-    const candidate = trim ? value.trim() : value;
+    // Strip the markup first, so the length rules apply to the text that the server stores.
+    const text = freeText ? stripHtml(value) : value;
+    const candidate = trim ? text.trim() : text;
 
     if (allowed && !allowed.includes(candidate)) {
         return { field, message: `${label} must be one of: ${allowed.join(', ')}` };
@@ -217,7 +224,9 @@ export const pickValidated = (source, rules) => {
             continue;
         }
 
-        if (typeof value === 'string' && rule.trim !== false) {
+        if (typeof value === 'string' && rule.freeText) {
+            validated[rule.field] = stripHtml(value).trim();
+        } else if (typeof value === 'string' && rule.trim !== false) {
             validated[rule.field] = value.trim();
         } else {
             validated[rule.field] = value;
@@ -245,8 +254,8 @@ export const BOOKING_RULES = {
 
 // The table has no freelancer field, because the server sets the owner from the token.
 export const GIG_RULES = {
-    title: { field: 'title', label: 'Title', minLength: 3, maxLength: 80 },
-    description: { field: 'description', label: 'Description', minLength: 10, maxLength: 1000 },
+    title: { field: 'title', label: 'Title', minLength: 3, maxLength: 80, freeText: true },
+    description: { field: 'description', label: 'Description', minLength: 10, maxLength: 1000, freeText: true },
     category: { field: 'category', label: 'Category', allowed: GIG_CATEGORIES },
     // The smallest rate is 0.01, because a gig must cost more than nothing.
     rate: { field: 'rate', label: 'Rate', type: 'number', min: 0.01, max: 100000 },
@@ -259,3 +268,8 @@ export const GIG_QUERY_RULES = {
     // Keep the search short, because the server turns the search text into a pattern.
     search: { field: 'search', label: 'Search', maxLength: 50, required: false },
 };
+
+/* ref
+https://github.com/apostrophecms/apostrophe/tree/main/packages/sanitize-html
+https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
+*/
