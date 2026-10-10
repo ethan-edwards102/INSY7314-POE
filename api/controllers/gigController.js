@@ -1,3 +1,4 @@
+import Booking from '../models/Booking.js';
 import Gig from '../models/Gig.js';
 import { handleError, notFound } from '../utils/handleError.js';
 import { buildBrowseFilter } from '../utils/gigFilter.js';
@@ -86,11 +87,21 @@ export const deleteGig = async (req, res) => {
             filter.freelancer = req.user.id;
         }
 
-        const gig = await Gig.findOneAndDelete(filter);
+        const gig = await Gig.findOne(filter);
 
         if (!gig) {
             return notFound(res, 'Gig');
         }
+
+        // Keep a booked gig, because its bookings and transactions still point to it.
+        if (await Booking.exists({ gig: gig._id })) {
+            gig.isActive = false;
+            await gig.save();
+
+            return ok(res, 'Gig deactivated because it has bookings', gig);
+        }
+
+        await gig.deleteOne();
 
         return ok(res, 'Gig deleted');
     } catch (error) {
