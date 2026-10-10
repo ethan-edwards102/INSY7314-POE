@@ -3,6 +3,7 @@ import Booking from '../models/Booking.js';
 import Gig from '../models/Gig.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
+import { logServerError } from '../utils/handleError.js';
 
 // Multiply in whole cents, because a decimal product can round the wrong way.
 export const computeTotal = (unitRate, quantity) => (Math.round(unitRate * 100) * quantity) / 100;
@@ -47,7 +48,19 @@ export const createBooking = async (clientId, { gig: gigId, scheduledFor, quanti
         return { booking, transaction };
     } catch (error) {
         // A standalone mongod has no multi document transaction, so undo the booking by hand.
-        await Booking.deleteOne({ _id: booking._id });
+        try {
+            const stored = await Transaction.findOne({ booking: booking._id });
+
+            // Keep the booking when the insert succeeded and only the reply failed.
+            if (stored) {
+                return { booking, transaction: stored };
+            }
+
+            await Booking.deleteOne({ _id: booking._id });
+        } catch (cleanupError) {
+            logServerError(cleanupError);
+        }
+
         throw error;
     }
 };

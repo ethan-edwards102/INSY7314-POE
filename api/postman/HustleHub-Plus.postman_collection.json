@@ -4204,7 +4204,7 @@
                   "    pm.expect(data.transaction.amount).to.eql(999.99);",
                   "    pm.expect(data.transaction.currency).to.eql('ZAR');",
                   "    pm.expect(data.transaction.status).to.eql('Completed');",
-                  "    pm.expect(data.transaction.reference).to.match(/^HH-[0-9A-F]{8}$/);",
+                  "    pm.expect(data.transaction.reference).to.match(/^HH-[0-9A-F]{16}$/);",
                   "    pm.environment.set('transactionId', data.transaction._id);",
                   "});"
                 ]
@@ -5741,7 +5741,7 @@
                   "",
                   "pm.test('Carries a reference and names the parties', function () {",
                   "    var t = pm.response.json().data;",
-                  "    pm.expect(t.reference).to.match(/^HH-[0-9A-F]{8}$/);",
+                  "    pm.expect(t.reference).to.match(/^HH-[0-9A-F]{16}$/);",
                   "    pm.expect(t.client.name).to.eql('Tyreece S');",
                   "    pm.expect(t.freelancer.name).to.eql('Ethan Edwards');",
                   "    pm.expect(t.client).to.not.have.property('email');",

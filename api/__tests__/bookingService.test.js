@@ -1,6 +1,9 @@
-import { describe, expect, test } from '@jest/globals';
+import { afterEach, describe, expect, jest, test } from '@jest/globals';
+import Booking from '../models/Booking.js';
+import Gig from '../models/Gig.js';
 import Transaction from '../models/Transaction.js';
-import { computeTotal } from '../services/bookingService.js';
+import User from '../models/User.js';
+import { computeTotal, createBooking } from '../services/bookingService.js';
 import { BOOKING_RULES, checkDate, checkObjectId, checkRules } from '../utils/validators.js';
 import { listScope, partyScope } from '../utils/ownerScope.js';
 
@@ -70,5 +73,69 @@ describe('append only transaction', () => {
     test('the model refuses an update and a delete', async () => {
         await expect(Transaction.updateOne({}, { amount: 1 })).rejects.toThrow('cannot be changed');
         await expect(Transaction.deleteMany({})).rejects.toThrow('cannot be changed');
+    });
+
+    test('a save of a stored transaction is refused, because save skips the query hooks', async () => {
+        const stored = Transaction.hydrate({
+            booking: 'a'.repeat(24),
+            client: 'b'.repeat(24),
+            freelancer: 'c'.repeat(24),
+            amount: 10,
+        });
+
+        stored.amount = 1;
+
+        await expect(stored.save()).rejects.toThrow('cannot be changed');
+    });
+});
+
+describe('createBooking when the transaction fails', () => {
+    const gig = { _id: 'g1', freelancer: 'f1', rate: 100, rateType: 'Hour' };
+    const booking = { _id: 'b1', client: 'c1', freelancer: 'f1', total: 100 };
+
+    const setup = () => {
+        jest.spyOn(Gig, 'findOne').mockResolvedValue(gig);
+        jest.spyOn(User, 'exists').mockResolvedValue({ _id: 'f1' });
+        jest.spyOn(Booking, 'create').mockResolvedValue(booking);
+        jest.spyOn(Transaction, 'create').mockRejectedValue(new Error('transaction write failed'));
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    };
+
+    afterEach(() => jest.restoreAllMocks());
+
+    test('deletes the booking so no booking exists without a payment', async () => {
+        setup();
+        jest.spyOn(Transaction, 'findOne').mockResolvedValue(null);
+        const remove = jest.spyOn(Booking, 'deleteOne').mockResolvedValue({});
+
+        await expect(createBooking('c1', { gig: 'g1', scheduledFor: '2026-12-01' })).rejects.toThrow('transaction write failed');
+        expect(remove).toHaveBeenCalledWith({ _id: 'b1' });
+    });
+
+    test('keeps the booking when the transaction was stored and only the reply failed', async () => {
+        setup();
+        jest.spyOn(Transaction, 'findOne').mockResolvedValue({ _id: 't1' });
+        const remove = jest.spyOn(Booking, 'deleteOne').mockResolvedValue({});
+
+        const result = await createBooking('c1', { gig: 'g1', scheduledFor: '2026-12-01' });
+
+        expect(result.transaction._id).toBe('t1');
+        expect(remove).not.toHaveBeenCalled();
+    });
+
+    test('reports the original error when the cleanup also fails', async () => {
+        setup();
+        jest.spyOn(Transaction, 'findOne').mockResolvedValue(null);
+        jest.spyOn(Booking, 'deleteOne').mockRejectedValue(new Error('connection lost'));
+
+        await expect(createBooking('c1', { gig: 'g1', scheduledFor: '2026-12-01' })).rejects.toThrow('transaction write failed');
+    });
+
+    test('refuses a gig whose owner is no longer a Freelancer', async () => {
+        setup();
+        User.exists.mockResolvedValue(null);
+
+        await expect(createBooking('c1', { gig: 'g1', scheduledFor: '2026-12-01' })).resolves.toBeNull();
+        expect(Booking.create).not.toHaveBeenCalled();
     });
 });
