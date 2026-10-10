@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 import https from 'node:https';
+import { fileURLToPath } from 'node:url';
 import mongoose from 'mongoose';
 import newman from 'newman';
 
@@ -9,7 +10,8 @@ Runs the Postman collection against the local server.
 Supplies baseUrl and the admin credentials from .env.
 */
 
-const COLLECTION = 'postman/HustleHub-Plus.postman_collection.json';
+// Resolve the path from this file so the run works from any folder.
+const COLLECTION = fileURLToPath(new URL('../postman/HustleHub-Plus.postman_collection.json', import.meta.url));
 
 const REQUIRED = [
     ['PORT', 'the port the HTTPS server listens on, e.g. 5001'],
@@ -93,3 +95,7 @@ newman.run(
         }
     }
 );
+
+/* ref
+https://nodejs.org/api/url.html
+*/
