@@ -80,6 +80,9 @@ newman.run(
                 export: `${REPORTS}newman-report.html`,
                 title: 'HustleHub+ API test run',
                 browserTitle: 'HustleHub+ API test run',
+                // Hide the Admin password and the bearer tokens, because a report can leave the machine.
+                skipEnvironmentVars: ['adminPassword'],
+                skipSensitiveData: true,
             },
             json: { export: `${REPORTS}newman-report.json` },
         },

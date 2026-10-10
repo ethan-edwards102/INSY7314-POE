@@ -63,3 +63,6 @@ Thumbs.db
 # Production / Build output (uncomment if using TypeScript/build tools)
 # dist/
 # build/
+
+# Newman reports hold run data, so each machine writes its own
+api/postman/reports/
