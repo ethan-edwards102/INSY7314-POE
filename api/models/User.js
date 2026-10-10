@@ -1,9 +1,7 @@
 import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 
-// Every account has one of these roles. The role travels in the JWT
-// payload. This lets route-level access control work without a second
-// database lookup.
+// Every account has one of these roles, and authenticate reads the current role from the database.
 export const USER_ROLES = ['Client', 'Freelancer', 'Admin']
 
 // This is the work factor for bcrypt. A higher number is slower to brute

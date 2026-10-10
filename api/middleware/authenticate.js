@@ -1,9 +1,9 @@
 import User from '../models/User.js';
+import { OBJECT_ID_PATTERN } from './validateObjectId.js';
 import { fail } from '../utils/respond.js';
 import { verifyToken } from '../utils/token.js';
 
-// Set req.user from the Authorization header. The role comes from the
-// database, so a demoted or deleted user loses access at once.
+// Read the role from the database so a demoted or deleted user loses access on the next request.
 export const authenticate = async (req, res, next) => {
     const header = req.headers.authorization ?? '';
     const [scheme, token] = header.split(' ');
@@ -23,6 +23,11 @@ export const authenticate = async (req, res, next) => {
         const message = error.name === 'TokenExpiredError' ? 'Token has expired' : 'Invalid token';
 
         return fail(res, 401, message);
+    }
+
+    // Reject an id that is not a plain string so a signed payload cannot inject a query operator.
+    if (typeof payload.id !== 'string' || !OBJECT_ID_PATTERN.test(payload.id)) {
+        return fail(res, 401, 'Invalid token');
     }
 
     try {

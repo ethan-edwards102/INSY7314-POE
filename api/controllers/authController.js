@@ -58,7 +58,7 @@ export const login = async (req, res) => {
     }
 };
 
-// Read the user again, because the token only holds the id.
+// Read the user from the database, because the token holds only the id and role.
 export const me = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
