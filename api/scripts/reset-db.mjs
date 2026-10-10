@@ -8,7 +8,7 @@ Drops the database and prints what each collection held.
 
 if (!process.env.MONGO_URI?.trim()) {
     console.error('Missing required configuration in .env (1 value):\n');
-    console.error('  MONGO_URI — the MongoDB connection string, e.g. mongodb://127.0.0.1:27017/hustle_hub_plus');
+    console.error('  MONGO_URI: the MongoDB connection string, e.g. mongodb://127.0.0.1:27017/hustle_hub_plus');
     console.error('\nAdd it to your .env, then run `npm run db:reset` again.');
     process.exit(1);
 }

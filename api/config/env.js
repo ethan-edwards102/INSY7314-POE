@@ -25,7 +25,7 @@ const missing = REQUIRED.filter(([key]) => !process.env[key]?.trim());
 if (missing.length > 0) {
     console.error(`Missing required configuration in .env (${missing.length} value(s)):\n`);
     for (const [key, description] of missing) {
-        console.error(`  ${key} — ${description}`);
+        console.error(`  ${key}: ${description}`);
     }
     console.error('\nCopy .env.example to .env and fill in every value, then start again.');
     process.exit(1);

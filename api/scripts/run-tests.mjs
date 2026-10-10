@@ -27,7 +27,7 @@ const missing = REQUIRED.filter(([key]) => !process.env[key]?.trim());
 if (missing.length > 0) {
     console.error(`Missing required configuration in .env (${missing.length} value(s)):\n`);
     for (const [key, description] of missing) {
-        console.error(`  ${key} — ${description}`);
+        console.error(`  ${key}: ${description}`);
     }
     console.error('\nAdd every value to your .env, then run `npm run test:api` again.');
     process.exit(1);
@@ -98,7 +98,7 @@ newman.run(
             process.exit(1);
         }
 
-        // Newmans callback does not set an exit code.
+        // The Newman callback does not set an exit code.
         if (summary.run.failures.length > 0) {
             // The limiters keep their counters in memory, so only a restart clears them.
             console.error('If a request answered 429, restart the API and reset the database before a new run.');
