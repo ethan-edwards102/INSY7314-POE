@@ -11,20 +11,28 @@ export const SELF_SERVICE_ROLES = USER_ROLES.filter((role) => role !== 'Admin');
 
 const ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>' };
 
+// A fixed round limit keeps the cost linear when an attacker nests encoded entities.
+const MAX_STRIP_ROUNDS = 4;
+
 // Strip again after each decode, because encoded markup becomes a live tag once decoded.
+// Return null when the text still changes after the last round, so the caller refuses it.
 export const stripHtml = (value) => {
-    let previous;
     let current = value;
 
-    do {
-        previous = current;
-        current = sanitizeHtml(previous, { allowedTags: [], allowedAttributes: {} }).replace(
+    for (let round = 0; round < MAX_STRIP_ROUNDS; round += 1) {
+        const next = sanitizeHtml(current, { allowedTags: [], allowedAttributes: {} }).replace(
             /&(?:amp|lt|gt);/g,
             (entity) => ENTITIES[entity]
         );
-    } while (current !== previous);
 
-    return current;
+        if (next === current) {
+            return current;
+        }
+
+        current = next;
+    }
+
+    return null;
 };
 
 // Treat undefined, null, and a string of only spaces as "not supplied".
@@ -53,6 +61,11 @@ export const checkString = (
 
     // Strip the markup first, so the length rules apply to the text that the server stores.
     const text = freeText ? stripHtml(value) : value;
+
+    if (text === null) {
+        return { field, message: `${label} contains markup that cannot be stored` };
+    }
+
     const candidate = trim ? text.trim() : text;
 
     if (allowed && !allowed.includes(candidate)) {

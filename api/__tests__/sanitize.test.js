@@ -118,6 +118,14 @@ describe('free text stripping', () => {
         expect(stripHtml('&amp;lt;b&amp;gt;Lawn')).toBe('Lawn');
     });
 
+    test('refuses deeply nested entities instead of decoding them layer by layer', () => {
+        const nested = `&${'amp;'.repeat(2380)}Lawn mowing`;
+        const errors = checkRules({ ...gig, description: nested }, GIG_RULES);
+
+        expect(stripHtml(nested)).toBeNull();
+        expect(errors).toEqual([{ field: 'description', message: 'Description contains markup that cannot be stored' }]);
+    });
+
     test('counts an angle bracket as one character toward the title limit', () => {
         expect(checkRules({ ...gig, title: `${'>'.repeat(80)}` }, GIG_RULES)).toEqual([]);
     });
