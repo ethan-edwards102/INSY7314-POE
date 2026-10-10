@@ -2,7 +2,7 @@
   "info": {
     "name": "HustleHub+ API",
     "_postman_id": "f56b799b-197e-4b45-a617-493a430aaea3",
-    "description": "# HustleHub+ API, Part 1\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources. 120 requests in 13 folders, 544 assertions.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 12 confirms the suite deleted every marketplace record it created.",
+    "description": "# HustleHub+ API, Part 1\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources. 154 requests in 14 folders, 675 assertions.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 14 confirms the suite deleted the records it should delete, and that bookings and transactions remain.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -5556,10 +5556,75 @@
     },
     {
       "name": "12. Bookings",
-      "description": "A booking through its whole life. Client, freelancer and service are embedded copies, so each one is validated as part of the booking.",
+      "description": "Tyreece books a gig of Ethan. The server sets the price, the client, the freelancer and the status. The folder proves who may book, which dates and quantities the server accepts, who may read each booking, and that a booked gig is deactivated instead of deleted.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// A booking date must be in the future and within a year, so compute it at run time.",
+              "var day = 24 * 60 * 60 * 1000;",
+              "pm.variables.set('futureDate', new Date(Date.now() + 7 * day).toISOString());",
+              "pm.variables.set('pastDate', new Date(Date.now() - day).toISOString());",
+              "pm.variables.set('farDate', new Date(Date.now() + 400 * day).toISOString());"
+            ]
+          }
+        }
+      ],
       "item": [
         {
-          "name": "Create a booking",
+          "name": "Log in as Dylan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Stores the token for later requests', function () {",
+                  "    pm.expect(pm.response.json().token).to.be.a('string');",
+                  "    pm.environment.set('dylanToken', pm.response.json().token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Dylan is the second Client. The ownership checks need a Client who is not a party to the booking.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"dylan.olsen@hustlehub.test\",\n  \"password\": \"Dylan!Pass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create a gig that needs rounding",
           "event": [
             {
               "listen": "test",
@@ -5570,22 +5635,68 @@
                   "    pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Booking created');",
+                  "pm.test('Stores the gig id', function () {",
+                  "    pm.environment.set('bookGigId', pm.response.json().data._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gigs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs"
+              ]
+            },
+            "description": "A rate with cents makes the server total worth checking. The id is stored for the bookings below.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Garden clean up\",\n  \"description\": \"Clear and bag the garden waste.\",\n  \"category\": \"Gardening\",\n  \"rate\": 333.33,\n  \"rateType\": \"Hour\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Freelancer cannot book a gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
                   "});",
                   "",
-                  "pm.test('Stores what was sent', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data).to.have.property('_id');",
-                  "    pm.expect(data.quantity).to.eql(2);",
-                  "    pm.expect(data.client.name).to.eql('Tyreece S');",
-                  "    pm.expect(data.freelancer.name).to.eql('Ethan Edwards');",
-                  "    pm.expect(data.service.category).to.eql('DogGrooming');",
-                  "});",
-                  "",
-                  "pm.environment.set('bookingId', pm.response.json().data._id);"
+                  "pm.test('No booking is created', function () {",
+                  "    pm.expect(pm.response.json().success).to.be.false;",
+                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
+                  "});"
                 ]
               }
             }
@@ -5607,49 +5718,51 @@
                 "bookings"
               ]
             },
+            "description": "Only a Client books work. The role can never do this action, so the answer is 403.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"date\": \"2026-09-10T09:00:00.000Z\",\n  \"quantity\": 2,\n  \"client\": {\n    \"name\": \"Tyreece S\"\n  },\n  \"freelancer\": {\n    \"name\": \"Ethan Edwards\",\n    \"services\": []\n  },\n  \"service\": {\n    \"category\": \"DogGrooming\",\n    \"rate\": 250,\n    \"rateType\": \"Hour\"\n  }\n}",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
             }
           }
         },
         {
-          "name": "List bookings",
+          "name": "A booking needs a signed in user",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Bookings retrieved');",
-                  "});",
-                  "",
-                  "pm.test('Returns a counted list containing the new record', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.data).to.be.an('array');",
-                  "    pm.expect(body.count).to.eql(body.data.length);",
-                  "    var ids = body.data.map(function (entry) { return entry._id; });",
-                  "    pm.expect(ids).to.include(pm.environment.get('bookingId'));",
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
                   "});"
                 ]
               }
             }
           ],
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/bookings",
               "host": [
@@ -5658,73 +5771,700 @@
               "path": [
                 "bookings"
               ]
+            },
+            "description": "The request carries no token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
             }
           }
         },
         {
-          "name": "Get the booking by id",
+          "name": "Book a gig",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
                   "});",
                   "",
                   "pm.test('Answers with the standard envelope', function () {",
                   "    var body = pm.response.json();",
                   "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Booking retrieved');",
+                  "    pm.expect(body.message).to.eql('Booking confirmed');",
                   "});",
                   "",
-                  "pm.test('Returns the record that was just created', function () {",
-                  "    pm.expect(pm.response.json().data._id).to.eql(pm.environment.get('bookingId'));",
+                  "pm.test('The server computes the total from the gig rate', function () {",
+                  "    var booking = pm.response.json().data.booking;",
+                  "    pm.expect(booking.unitRate).to.eql(333.33);",
+                  "    pm.expect(booking.rateType).to.eql('Hour');",
+                  "    pm.expect(booking.quantity).to.eql(3);",
+                  "    pm.expect(booking.total).to.eql(999.99);",
+                  "});",
+                  "",
+                  "pm.test('The caller is the client and the gig owner is the freelancer', function () {",
+                  "    var booking = pm.response.json().data.booking;",
+                  "    pm.expect(booking.client).to.eql(pm.environment.get('tyreeceId'));",
+                  "    pm.expect(booking.freelancer).to.eql(pm.environment.get('ethanId'));",
+                  "    pm.expect(booking.status).to.eql('Confirmed');",
+                  "    pm.environment.set('bookingId', booking._id);",
+                  "});",
+                  "",
+                  "pm.test('A transaction is recorded for the same amount', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data.transaction.booking).to.eql(data.booking._id);",
+                  "    pm.expect(data.transaction.amount).to.eql(999.99);",
+                  "    pm.expect(data.transaction.currency).to.eql('ZAR');",
+                  "    pm.expect(data.transaction.status).to.eql('Completed');",
+                  "    pm.expect(data.transaction.reference).to.match(/^HH-[0-9A-F]{8}$/);",
+                  "    pm.environment.set('transactionId', data.transaction._id);",
                   "});"
                 ]
               }
             }
           ],
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "raw": "{{baseUrl}}/bookings",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "bookings",
-                "{{bookingId}}"
+                "bookings"
+              ]
+            },
+            "description": "The body tries to set the total, the rate, the status and both people. The server must ignore all of them.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\",\n  \"quantity\": 3,\n  \"total\": 1,\n  \"unitRate\": 1,\n  \"status\": \"Cancelled\",\n  \"client\": \"{{dylanId}}\",\n  \"freelancer\": \"{{ndumsioId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
               ]
             }
           }
         },
         {
-          "name": "Update the booking",
+          "name": "A second Client books the same gig with the default quantity",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
                   "});",
                   "",
                   "pm.test('Answers with the standard envelope', function () {",
                   "    var body = pm.response.json();",
                   "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Booking updated');",
+                  "    pm.expect(body.message).to.eql('Booking confirmed');",
                   "});",
                   "",
-                  "pm.test('Returns the changed record', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data._id).to.eql(pm.environment.get('bookingId'));",
-                  "    pm.expect(data.quantity).to.eql(3);",
-                  "    pm.expect(data.client.name).to.eql('Dylan Olsen');",
-                  "    pm.expect(data.service.category).to.eql('HouseCleaning');",
+                  "pm.test('Quantity defaults to 1 and the total equals the rate', function () {",
+                  "    var booking = pm.response.json().data.booking;",
+                  "    pm.expect(booking.quantity).to.eql(1);",
+                  "    pm.expect(booking.total).to.eql(333.33);",
+                  "    pm.environment.set('dylanBookingId', booking._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "Many Clients may book one gig. A missing quantity means one.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{dylanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a date in the past",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var errors = pm.response.json().errors;",
+                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('scheduledFor');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "A booking must be in the future.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{pastDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a date more than a year ahead",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var errors = pm.response.json().errors;",
+                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('scheduledFor');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "The server limits how far ahead a booking may be.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{farDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a missing gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var errors = pm.response.json().errors;",
+                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('gig');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "The gig is required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a malformed gig id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var errors = pm.response.json().errors;",
+                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('gig');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "The id is checked before any query runs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"not-an-id\",\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a gig sent as an operator object",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var errors = pm.response.json().errors;",
+                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('gig');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "An operator object must never reach a query.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": {\n    \"$ne\": null\n  },\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a quantity above 100",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var errors = pm.response.json().errors;",
+                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('quantity');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "The quantity limit stops an absurd total.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\",\n  \"quantity\": 101\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject a fractional quantity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "});",
+                  "",
+                  "pm.test('Names the field that failed', function () {",
+                  "    var errors = pm.response.json().errors;",
+                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('quantity');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "The quantity is a whole number.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\",\n  \"quantity\": 1.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "An unknown gig returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Gig not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "A well formed id that matches no gig.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"000000000000000000000000\",\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A booking cannot be edited",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
                   "});"
                 ]
               }
@@ -5748,182 +6488,38 @@
                 "{{bookingId}}"
               ]
             },
+            "description": "A booking is a record of an agreement. No route lets a caller change it.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"date\": \"2026-09-11T09:00:00.000Z\",\n  \"quantity\": 3,\n  \"client\": {\n    \"name\": \"Dylan Olsen\"\n  },\n  \"freelancer\": {\n    \"name\": \"Ndumsio J\",\n    \"services\": []\n  },\n  \"service\": {\n    \"category\": \"HouseCleaning\",\n    \"rate\": 180,\n    \"rateType\": \"Day\"\n  }\n}",
+              "raw": "{\n  \"total\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
-          }
-        },
-        {
-          "name": "Reject an invalid booking",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "",
-                  "pm.test('Rejects the request with a validation error', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
-                  "});",
-                  "",
-                  "pm.test('Names the field that failed', function () {",
-                  "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['date', 'quantity', 'client.name']);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/bookings",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "bookings"
-              ]
             },
-            "description": "Validation middleware answers this before any database work is attempted, so nothing is written.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"quantity\": 0,\n  \"client\": {\n    \"name\": \"<script>alert(1)</script>\"\n  },\n  \"freelancer\": {\n    \"name\": \"Ethan Edwards\",\n    \"services\": []\n  },\n  \"service\": {\n    \"category\": \"DogGrooming\",\n    \"rate\": 250,\n    \"rateType\": \"Hour\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
                 }
-              }
-            }
-          }
-        },
-        {
-          "name": "Reject unknown fields inside an embedded document",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "pm.test('Drops what the rules do not declare, at every level', function () {",
-                  "    var data = pm.response.json().data;",
-                  "    pm.expect(data.client).to.not.have.property('isAdmin');",
-                  "    pm.expect(data.client._id).to.not.eql('000000000000000000000000');",
-                  "    pm.expect(data.client.name).to.eql('Tyreece S');",
-                  "});",
-                  "",
-                  "pm.environment.set('strippedBookingId', pm.response.json().data._id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/bookings",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "bookings"
               ]
-            },
-            "description": "The body is valid apart from two fields nobody declared. The request succeeds and the extras are dropped, rather than being written to the embedded client.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"date\": \"2026-09-12T09:00:00.000Z\",\n  \"quantity\": 1,\n  \"client\": {\n    \"name\": \"Tyreece S\",\n    \"_id\": \"000000000000000000000000\",\n    \"isAdmin\": true\n  },\n  \"freelancer\": {\n    \"name\": \"Ethan Edwards\",\n    \"services\": []\n  },\n  \"service\": {\n    \"category\": \"DogGrooming\",\n    \"rate\": 250,\n    \"rateType\": \"Hour\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
             }
           }
         },
         {
-          "name": "Delete the second booking",
+          "name": "A booking cannot be deleted",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Booking deleted');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/bookings/{{strippedBookingId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "bookings",
-                "{{strippedBookingId}}"
-              ]
-            },
-            "description": "Teardown for the request above, so the suite leaves nothing behind."
-          }
-        },
-        {
-          "name": "Delete the booking",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Answers with the standard envelope', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.true;",
-                  "    pm.expect(body.message).to.eql('Booking deleted');",
-                  "});",
-                  "",
-                  "pm.test('Carries no data with the confirmation', function () {",
-                  "    pm.expect(pm.response.json()).to.not.have.property('data');",
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
                   "});"
                 ]
               }
@@ -5941,25 +6537,49 @@
                 "bookings",
                 "{{bookingId}}"
               ]
+            },
+            "description": "No delete route exists, so the router answers 404.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
             }
           }
         },
         {
-          "name": "The deleted booking is gone",
+          "name": "The client reads the booking",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 404', function () {",
-                  "    pm.response.to.have.status(404);",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Reports it as not found', function () {",
+                  "pm.test('Answers with the standard envelope', function () {",
                   "    var body = pm.response.json();",
-                  "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Booking not found');",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Booking retrieved');",
+                  "});",
+                  "",
+                  "pm.test('The total is still the server value', function () {",
+                  "    pm.expect(pm.response.json().data.total).to.eql(999.99);",
+                  "});",
+                  "",
+                  "pm.test('Shows the gig title and the party names only', function () {",
+                  "    var booking = pm.response.json().data;",
+                  "    pm.expect(booking.gig.title).to.eql('Garden clean up');",
+                  "    pm.expect(booking.client.name).to.eql('Tyreece S');",
+                  "    pm.expect(booking.freelancer.name).to.eql('Ethan Edwards');",
+                  "    pm.expect(booking.client).to.not.have.property('email');",
+                  "    pm.expect(booking.freelancer).to.not.have.property('email');",
                   "});"
                 ]
               }
@@ -5977,14 +6597,1182 @@
                 "bookings",
                 "{{bookingId}}"
               ]
+            },
+            "description": "The booking is unchanged after the refused edit and delete. Names are populated and nothing else of the users.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The freelancer reads the booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}"
+              ]
+            },
+            "description": "The freelancer of the booking is a party.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin reads the booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}"
+              ]
+            },
+            "description": "The Admin may read any booking.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Another Client cannot read the booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}"
+              ]
+            },
+            "description": "Ownership sits inside the query, so a stranger gets 404 and cannot tell the booking exists.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{dylanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Another Freelancer cannot read the booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}"
+              ]
+            },
+            "description": "The same rule applies to a Freelancer who is not the gig owner.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A malformed booking id is refused with 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/not-an-id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "not-an-id"
+              ]
+            },
+            "description": "The id is checked before any query runs.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Client lists only their own bookings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Bookings retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Only the caller is the client', function () {",
+                  "    var ids = pm.response.json().data.map(function (b) { return b._id; });",
+                  "    pm.expect(ids).to.include(pm.environment.get('bookingId'));",
+                  "    pm.expect(ids).to.not.include(pm.environment.get('dylanBookingId'));",
+                  "    pm.response.json().data.forEach(function (b) {",
+                  "        pm.expect(b.client._id).to.eql(pm.environment.get('tyreeceId'));",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "Dylan booked the same gig, and his booking must not appear.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Freelancer lists the bookings of their gigs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Shows both bookings, newest first', function () {",
+                  "    var ids = pm.response.json().data.map(function (b) { return b._id; });",
+                  "    pm.expect(ids).to.eql([pm.environment.get('dylanBookingId'), pm.environment.get('bookingId')]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "Both Clients booked Ethan, so he sees both bookings.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Freelancer with no bookings sees none",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The list is empty', function () {",
+                  "    pm.expect(pm.response.json().count).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "Ndumsio is a party to no booking.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin lists every booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Includes the bookings of both Clients', function () {",
+                  "    var ids = pm.response.json().data.map(function (b) { return b._id; });",
+                  "    pm.expect(ids).to.include(pm.environment.get('bookingId'));",
+                  "    pm.expect(ids).to.include(pm.environment.get('dylanBookingId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "The Admin is not limited to one side.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A booked gig is deactivated, not deleted",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Gig deactivated because it has bookings');",
+                  "});",
+                  "",
+                  "pm.test('The gig is now inactive', function () {",
+                  "    pm.expect(pm.response.json().data.isActive).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gigs/{{bookGigId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gigs",
+                "{{bookGigId}}"
+              ]
+            },
+            "description": "The bookings and transactions still point to the gig, so the server keeps it and hides it.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "An inactive gig cannot be booked",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "    pm.expect(body.message).to.eql('Gig not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "An inactive gig looks the same as a missing gig.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gig\": \"{{bookGigId}}\",\n  \"scheduledFor\": \"{{futureDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The booking still shows its gig after deactivation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The gig title is still populated', function () {",
+                  "    pm.expect(pm.response.json().data.gig.title).to.eql('Garden clean up');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}"
+              ]
+            },
+            "description": "The history stays complete.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
             }
           }
         }
       ]
     },
     {
-      "name": "13. The suite leaves no records behind",
-      "description": "Every marketplace record the collection created was deleted by the folder that created it. These six checks prove it, so repeated runs do not fill the database. The five accounts remain, because the API has no endpoint that deletes a user: `npm run db:reset` is what clears those.",
+      "name": "13. Transactions",
+      "description": "Each booking made one transaction. The folder proves that a caller reads only their own, that the amount equals the booking total, and that the API offers no way to create, change or delete one.",
+      "item": [
+        {
+          "name": "A Client lists their own transactions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Transactions retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Shows one transaction with the booking total', function () {",
+                  "    var list = pm.response.json().data;",
+                  "    pm.expect(list.length).to.eql(1);",
+                  "    pm.expect(list[0]._id).to.eql(pm.environment.get('transactionId'));",
+                  "    pm.expect(list[0].amount).to.eql(999.99);",
+                  "    pm.expect(list[0].booking).to.eql(pm.environment.get('bookingId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions"
+              ]
+            },
+            "description": "Booking created this transaction. Dylan has one too, and it must not appear.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get the transaction by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answers with the standard envelope', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.message).to.eql('Transaction retrieved');",
+                  "});",
+                  "",
+                  "pm.test('Carries a reference and names the parties', function () {",
+                  "    var t = pm.response.json().data;",
+                  "    pm.expect(t.reference).to.match(/^HH-[0-9A-F]{8}$/);",
+                  "    pm.expect(t.client.name).to.eql('Tyreece S');",
+                  "    pm.expect(t.freelancer.name).to.eql('Ethan Edwards');",
+                  "    pm.expect(t.client).to.not.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
+            "description": "The transaction is the receipt of the simulated payment.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The freelancer reads the transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
+            "description": "The freelancer is paid by this transaction, so Ethan is a party.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin reads the transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
+            "description": "The Admin may read any transaction.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Another Client cannot read the transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
+            "description": "Ownership sits inside the query, so a stranger gets 404.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{dylanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Another Freelancer cannot read the transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
+            "description": "Ndumsio is not the freelancer on this transaction.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A malformed transaction id is refused with 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/not-an-id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "not-an-id"
+              ]
+            },
+            "description": "The id is checked before any query runs.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Freelancer with no earnings sees no transactions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The list is empty', function () {",
+                  "    pm.expect(pm.response.json().count).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions"
+              ]
+            },
+            "description": "Ndumsio is a party to no booking.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin lists every transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Includes the transactions of both Clients', function () {",
+                  "    var list = pm.response.json().data;",
+                  "    pm.expect(list.length).to.eql(2);",
+                  "    var amounts = list.map(function (t) { return t.amount; }).sort();",
+                  "    pm.expect(amounts).to.eql([333.33, 999.99]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions"
+              ]
+            },
+            "description": "Both bookings made one transaction each.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A transaction cannot be created through the API",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions"
+              ]
+            },
+            "description": "Only a booking creates a transaction. No create route exists.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking\": \"{{bookingId}}\",\n  \"amount\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A transaction cannot be edited",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
+            "description": "Not even the Admin can rewrite a financial record.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A transaction cannot be deleted",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
+            "description": "No delete route exists.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The transaction is unchanged after the write attempts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The amount is still the booking total', function () {",
+                  "    pm.expect(pm.response.json().data.amount).to.eql(999.99);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
+            "description": "Proves the refused requests changed nothing.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. The suite leaves no records behind",
+      "description": "Services, clients, freelancers, invoices and pops that the collection created were deleted by the folder that created them. Five checks prove it, so repeated runs do not fill the database. Bookings and transactions are permanent records, so the last two checks prove that they remain. The five accounts remain, because the API has no endpoint that deletes a user: `npm run db:reset` is what clears those.",
       "item": [
         {
           "name": "No services are left behind",
@@ -6162,7 +7950,7 @@
           }
         },
         {
-          "name": "No bookings are left behind",
+          "name": "Bookings stay as permanent records",
           "event": [
             {
               "listen": "test",
@@ -6173,10 +7961,10 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('The bookings collection is empty again', function () {",
-                  "    var body = pm.response.json();",
-                  "    pm.expect(body.count).to.eql(0);",
-                  "    pm.expect(body.data).to.be.an('array').that.is.empty;",
+                  "pm.test('Both bookings remain', function () {",
+                  "    var ids = pm.response.json().data.map(function (b) { return b._id; });",
+                  "    pm.expect(ids).to.include(pm.environment.get('bookingId'));",
+                  "    pm.expect(ids).to.include(pm.environment.get('dylanBookingId'));",
                   "});"
                 ]
               }
@@ -6192,6 +7980,61 @@
               ],
               "path": [
                 "bookings"
+              ]
+            },
+            "description": "No route deletes a booking, so both bookings made above remain.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Transactions stay as permanent records",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Both transactions remain', function () {",
+                  "    pm.expect(pm.response.json().count).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions"
+              ]
+            },
+            "description": "No route deletes a transaction, so the financial history remains.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
               ]
             }
           }
