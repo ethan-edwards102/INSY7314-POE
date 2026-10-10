@@ -6,6 +6,7 @@ import incomeRoutes from './routes/incomeRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
+import { sanitizeRequest } from './middleware/sanitize.js';
 import { ok } from './utils/respond.js';
 
 const app = express();
@@ -13,6 +14,9 @@ const app = express();
 // Limit the payload size. This stops an attacker from using a large
 // payload to exhaust server memory.
 app.use(express.json({ limit: '10kb' }));
+
+// Run this before the routes so no controller sees a key that starts with a dollar sign.
+app.use(sanitizeRequest);
 
 // Keep this route public so a monitor can check the API without a token.
 app.get('/health', (req, res) => ok(res, 'OK'));

@@ -544,19 +544,19 @@
                   "    pm.response.to.have.status(400);",
                   "});",
                   "",
-                  "pm.test('Rejects the request with a validation error', function () {",
+                  "pm.test('Rejects the request before validation', function () {",
                   "    var body = pm.response.json();",
                   "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "    pm.expect(body.message).to.eql('Request contains a forbidden key');",
                   "});",
                   "",
                   "pm.test('Names the field that failed', function () {",
                   "    var fields = pm.response.json().errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['email']);",
+                  "    pm.expect(fields).to.include.members(['body.email.$ne']);",
                   "});",
                   "",
-                  "pm.test('Refuses the object outright rather than querying with it', function () {",
-                  "    pm.expect(pm.response.json().errors[0].message).to.eql('Email must be text');",
+                  "pm.test('Names the operator path and refuses the object', function () {",
+                  "    pm.expect(pm.response.json().errors[0].message).to.eql('This key is not allowed');",
                   "});"
                 ]
               }
@@ -2326,9 +2326,9 @@
                   "",
                   "pm.test('Names every field that failed', function () {",
                   "    var body = pm.response.json();",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "    pm.expect(body.message).to.eql('Request contains a forbidden key');",
                   "    var fields = body.errors.map(function (e) { return e.field; });",
-                  "    pm.expect(fields).to.include.members(['rate']);",
+                  "    pm.expect(fields).to.include.members(['body.rate.$gt']);",
                   "});"
                 ]
               }
@@ -4334,12 +4334,12 @@
                   "pm.test('Answers with the standard envelope', function () {",
                   "    var body = pm.response.json();",
                   "    pm.expect(body.success).to.be.false;",
-                  "    pm.expect(body.message).to.eql('Validation failed');",
+                  "    pm.expect(body.message).to.eql('Request contains a forbidden key');",
                   "});",
                   "",
                   "pm.test('Names the field that failed', function () {",
                   "    var errors = pm.response.json().errors;",
-                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('gig');",
+                  "    pm.expect(errors.map(function (e) { return e.field; })).to.include('body.gig.$ne');",
                   "});"
                 ]
               }
