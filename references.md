@@ -48,3 +48,5 @@
 - https://www.mongodb.com/docs/manual/core/index-partial/
 - https://nodejs.org/api/crypto.html#cryptorandombytessize-callback
 - https://developer.mozilla.org/en-US/docs/Web/API/URL/origin
+- https://github.com/auth0/node-jsonwebtoken#jwtverifytoken-secretorpublickey-options-callback
+- https://datatracker.ietf.org/doc/html/rfc8725#section-3.1

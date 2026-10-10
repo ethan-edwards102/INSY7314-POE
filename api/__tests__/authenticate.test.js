@@ -40,4 +40,27 @@ describe('authenticate', () => {
         expect(res.code).toBe(401);
         expect(next).not.toHaveBeenCalled();
     });
+
+    test('refuses a token that the right secret signs with an algorithm other than HS256', async () => {
+        const token = jwt.sign({ id: '6a91e48284e36fb40ec00de6', role: 'Admin' }, process.env.JWT_SECRET, {
+            algorithm: 'HS512',
+        });
+        const res = {
+            status(code) {
+                this.code = code;
+                return this;
+            },
+            json(body) {
+                this.body = body;
+                return this;
+            },
+        };
+        const next = jest.fn();
+
+        await authenticate({ headers: { authorization: `Bearer ${token}` } }, res, next);
+
+        expect(res.code).toBe(401);
+        expect(res.body.message).toBe('Invalid token');
+        expect(next).not.toHaveBeenCalled();
+    });
 });
