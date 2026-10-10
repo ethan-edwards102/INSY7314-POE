@@ -2,7 +2,7 @@
   "info": {
     "name": "HustleHub+ API",
     "_postman_id": "f56b799b-197e-4b45-a617-493a430aaea3",
-    "description": "# HustleHub+ API, Part 1\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources. 154 requests in 14 folders, 675 assertions.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 14 confirms the suite deleted the records it should delete, and that bookings and transactions remain.",
+    "description": "# HustleHub+ API, Part 1\n\nCovers registration, login, authentication, role enforcement and full CRUD on all six\nmarketplace resources. 170 requests in 16 folders, 733 assertions.\n\n## Setup after cloning\n\nImport two files from the `postman/` folder of the repository:\n\n1. `HustleHub-Plus.postman_collection.json`, this collection.\n2. `HustleHub-Plus.postman_environment.json`, the environment.\n\nSelect the **HustleHub+ Local** environment in the top right, then fill in the one\nblank value, `adminPassword`. It must match `ADMIN_PASSWORD` in your `.env`, which is\nthe password `npm run seed:admin` gave the Admin account. `baseUrl` and `adminEmail`\nalready carry working defaults, so change them only if you changed your `.env`.\n\nThis collection stores no values of its own. Every configured value, and every token\nand id the tests capture while they run, lives in the environment. That is why the\ncollection can be exported and shared without ever carrying a credential, and why\nimporting it raises no secret warnings.\n\n## Before the run\n\n1. Start MongoDB, then run `npm run certs` once.\n2. Run `npm run db:reset`. This empties the database and seeds the Admin account, which\n   the collection signs in as. The suite uses fixed email addresses, so it expects to\n   start from an empty database.\n3. Run `npm start`.\n4. Run the collection with the Collection Runner.\n\nThe collection disables certificate verification for its own requests, because the\ndevelopment certificate is self signed, so nothing needs changing in Postman settings.\n\nTo run it headlessly instead, use `npm run test:api`. That feeds `baseUrl`, `adminEmail`\nand `adminPassword` in from your `.env` and needs no imported environment.\n\n## The cast\n\nFour accounts are created in section 1 and reused throughout: two Clients and two\nFreelancers. The Admin is created out of band by `npm run seed:admin`, because\nregistration refuses the Admin role and changing a role is itself Admin only.\n\n## What is asserted\n\nAlongside each request its own tests, every response in the collection is checked to\nconfirm it is JSON and that it never contains a password hash, a file path or a stack\ntrace. Section 16 confirms the suite deleted the records it should delete, and that bookings and transactions remain.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -7771,7 +7771,801 @@
       ]
     },
     {
-      "name": "14. The suite leaves no records behind",
+      "name": "14. Income",
+      "description": "GET /income/me sums the Completed transactions of the Freelancer who calls it.",
+      "item": [
+        {
+          "name": "A Freelancer sees the income from their bookings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Totals both bookings', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data.currency).to.eql('ZAR');",
+                  "    pm.expect(data.total).to.eql(1333.32);",
+                  "    pm.expect(data.count).to.eql(2);",
+                  "});",
+                  "",
+                  "pm.test('Groups the income into the current month', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    var month = new Date().toISOString().slice(0, 7);",
+                  "    pm.expect(data.byMonth.length).to.eql(1);",
+                  "    pm.expect(data.byMonth[0]).to.eql({ month: month, total: 1333.32, count: 2 });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/income/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "income",
+                "me"
+              ]
+            },
+            "description": "Ethan has two bookings, 999.99 from Tyreece and 333.33 from Dylan. The sum must be exact to the cent.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Freelancer with no bookings has no income",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Shows zero income', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data.total).to.eql(0);",
+                  "    pm.expect(data.count).to.eql(0);",
+                  "    pm.expect(data.byMonth).to.eql([]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/income/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "income",
+                "me"
+              ]
+            },
+            "description": "Ndumsio is not the freelancer on any booking, so another freelancer income must not leak in.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ndumsioToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Client cannot read income",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/income/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "income",
+                "me"
+              ]
+            },
+            "description": "Only a Freelancer earns income. A Client role can never do this action, so the answer is 403.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin cannot read income",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/income/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "income",
+                "me"
+              ]
+            },
+            "description": "The Admin has no earnings of their own, so the route is closed to this role as well.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Income needs a signed in user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/income/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "income",
+                "me"
+              ]
+            },
+            "description": "A token that is not a JWT must be refused before any income is read.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{malformedToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. Current user and role changes",
+      "description": "The API reads the role from the database on each request, so a role change takes effect at once.",
+      "item": [
+        {
+          "name": "A Client reads their own profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns the caller and no password', function () {",
+                  "    var user = pm.response.json().data;",
+                  "    pm.expect(user._id).to.eql(pm.environment.get('tyreeceId'));",
+                  "    pm.expect(user.email).to.eql('tyreece.s@hustlehub.test');",
+                  "    pm.expect(user.role).to.eql('Client');",
+                  "    pm.expect(user).to.not.have.property('password');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "The React client uses this route to restore the session after a page reload.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin reads their own profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns the Admin', function () {",
+                  "    var user = pm.response.json().data;",
+                  "    pm.expect(user.role).to.eql('Admin');",
+                  "    pm.environment.set('adminId', user._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Stores the Admin id, which the self change test below needs.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "An Admin cannot change their own role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Explains the refusal', function () {",
+                  "    pm.expect(pm.response.json().message).to.eql('You cannot change your own role');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{adminId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{adminId}}",
+                "role"
+              ]
+            },
+            "description": "A self demotion could leave the system with no Admin, so the API refuses it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Client\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin lists the users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Lists the cast with name, email and role only', function () {",
+                  "    var users = pm.response.json().data;",
+                  "    var emails = users.map(function (user) { return user.email; });",
+                  "    pm.expect(emails).to.include.members(['tyreece.s@hustlehub.test', 'ethan.edwards@hustlehub.test']);",
+                  "    users.forEach(function (user) {",
+                  "        pm.expect(user).to.not.have.property('password');",
+                  "        pm.expect(user).to.have.all.keys('_id', 'name', 'email', 'role', 'createdAt');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "The list must show every account and must never carry a password field.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Client cannot list the users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "The user list is Admin only.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tyreeceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A malformed user id is refused with 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/not-an-id/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "not-an-id",
+                "role"
+              ]
+            },
+            "description": "The id check runs before any query, so a bad id never reaches the driver.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Client\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The Admin demotes Ethan to Client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Ethan is now a Client', function () {",
+                  "    pm.expect(pm.response.json().data.role).to.eql('Client');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{ethanId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{ethanId}}",
+                "role"
+              ]
+            },
+            "description": "Ethan keeps the token he got when he was a Freelancer.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Client\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The old token of a demoted user loses Freelancer access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/income/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "income",
+                "me"
+              ]
+            },
+            "description": "The token still says Freelancer, but the database now says Client. The database wins.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The old token reports the current role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('The role comes from the database', function () {",
+                  "    pm.expect(pm.response.json().data.role).to.eql('Client');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "The token is still valid. Only the role it claims is out of date.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Restore Ethan as a Freelancer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Ethan is a Freelancer again', function () {",
+                  "    pm.expect(pm.response.json().data.role).to.eql('Freelancer');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{ethanId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{ethanId}}",
+                "role"
+              ]
+            },
+            "description": "Undoes the demotion, so the cast ends the run as section 1 created it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Freelancer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "The old token works again after the restore",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/income/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "income",
+                "me"
+              ]
+            },
+            "description": "A role change in either direction applies to the next request, with no new login.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ethanToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "16. The suite leaves no records behind",
       "description": "Services, clients, freelancers, invoices and pops that the collection created were deleted by the folder that created them. Five checks prove it, so repeated runs do not fill the database. Bookings and transactions are permanent records, so the last two checks prove that they remain. The five accounts remain, because the API has no endpoint that deletes a user: `npm run db:reset` is what clears those.",
       "item": [
         {
