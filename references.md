@@ -39,3 +39,5 @@
 - https://mongoosejs.com/docs/api/mongoose.html#Mongoose.prototype.set()
 - https://express-rate-limit.mintlify.app/reference/configuration
 - https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#protect-against-automated-attacks
+- https://helmet.js.org/
+- https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
